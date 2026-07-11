@@ -1,0 +1,29 @@
+import 'player.dart';
+import 'throw.dart';
+
+/// A finished match, ready to be stored. The full turn history is kept
+/// because the stats phase (averages, checkout %, heatmaps) needs every
+/// individual throw, not just the result.
+class MatchRecord {
+  MatchRecord({
+    required this.gameId,
+    required this.gameName,
+    required this.players,
+    required this.turnHistory,
+    required this.winnerId,
+    DateTime? finishedAt,
+  }) : finishedAt = finishedAt ?? DateTime.now();
+
+  final String gameId;
+
+  /// Registry id of the game mode, e.g. "x01".
+  final String gameName;
+
+  final List<Player> players;
+  final List<Turn> turnHistory;
+
+  /// Null if the match was abandoned rather than won.
+  final String? winnerId;
+
+  final DateTime finishedAt;
+}
