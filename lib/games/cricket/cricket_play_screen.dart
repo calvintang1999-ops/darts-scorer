@@ -300,9 +300,9 @@ class _CricketBoard extends StatelessWidget {
   }
 }
 
-/// One line between board and pad: the match-win message takes priority,
-/// then the White Horse / closed-number celebrations, otherwise darts
-/// remaining this turn.
+/// One line between board and pad: the match-win / White Horse message
+/// (both set on the model) takes priority, then the plain closed-number
+/// celebration, otherwise darts remaining this turn.
 class _StatusBar extends StatelessWidget {
   const _StatusBar({required this.game});
 
@@ -316,9 +316,6 @@ class _StatusBar extends StatelessWidget {
     Color color;
     if (game.statusMessage != null) {
       text = game.statusMessage!;
-      color = scheme.primary;
-    } else if (game.whiteHorse) {
-      text = 'White Horse! Three numbers closed this turn.';
       color = scheme.primary;
     } else if (game.closedThreeThisTurn) {
       text = 'Closed!';

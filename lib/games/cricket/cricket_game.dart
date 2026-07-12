@@ -70,6 +70,11 @@ class CricketGame extends DartsGame {
 
   int get dartsLeftInTurn => 3 - currentTurnThrows.length;
 
+  /// How many distinct numbers the current player has closed so far this
+  /// turn - the count backing [whiteHorse] (which just checks this hits
+  /// 3), exposed on its own for a UI that wants "2 of 3" style feedback.
+  int get closedThisTurn => _numbersClosedThisTurn.length;
+
   @override
   void applyThrow(Throw dartThrow) {
     if (isFinished) return;
@@ -133,6 +138,9 @@ class CricketGame extends DartsGame {
         _numbersClosedThisTurn.add(segment);
         if (_numbersClosedThisTurn.length >= 3) {
           whiteHorse = true;
+          statusMessage =
+              '${players[playerIndex].name} - White Horse! Three numbers '
+              'closed this turn.';
         }
       }
     }
