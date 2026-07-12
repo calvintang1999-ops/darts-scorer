@@ -199,18 +199,38 @@ void main() {
     });
 
     test('3 Colours requires one of each: black single, white single, a '
-        'ring hit on a numbered wedge', () {
+        'red-or-green segment', () {
       const target = ThreeColoursTarget();
 
-      // 20 (black single), 1 (white single), D18 (a ring hit).
+      // 20 (black single), 1 (white single), D18 (a red ring hit).
       final hit = [dart(p0, 20, 1), dart(p0, 1, 1), dart(p0, 18, 2)];
       final result = target.evaluate(hit);
       expect(result.hit, isTrue);
       expect(result.points, 20 + 1 + 36);
 
-      // Bull doesn't count as the ring-hit dart.
-      final withBull = [dart(p0, 20, 1), dart(p0, 1, 1), dart(p0, bullSegment, 2)];
-      expect(target.evaluate(withBull).hit, isFalse);
+      // The bull counts as the red-or-green dart too.
+      final withOuterBull = [
+        dart(p0, 20, 1),
+        dart(p0, 1, 1),
+        dart(p0, bullSegment, 1), // outer bull - green
+      ];
+      final outerResult = target.evaluate(withOuterBull);
+      expect(outerResult.hit, isTrue);
+      expect(outerResult.points, 20 + 1 + 25);
+
+      final withDoubleBull = [
+        dart(p0, 20, 1),
+        dart(p0, 1, 1),
+        dart(p0, bullSegment, 2), // inner/double bull - red
+      ];
+      final innerResult = target.evaluate(withDoubleBull);
+      expect(innerResult.hit, isTrue);
+      expect(innerResult.points, 20 + 1 + 50);
+
+      // Three black singles: no white, no ring hit - a clear miss, and
+      // pins that each colour must appear exactly once, not "at least".
+      final allBlack = [dart(p0, 20, 1), dart(p0, 18, 1), dart(p0, 13, 1)];
+      expect(target.evaluate(allBlack).hit, isFalse);
     });
 
     test('3 in a bed requires all three darts on the same wedge', () {

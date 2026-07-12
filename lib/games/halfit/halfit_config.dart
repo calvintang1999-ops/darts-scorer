@@ -169,10 +169,10 @@ class ScoreAtMostOnBoardTarget extends HalfItTarget {
 }
 
 /// All 3 darts qualify only if, between them, they cover a black single,
-/// a white single, and one double-or-treble segment on a numbered wedge
-/// (red or green, either counts). The bull doesn't count towards the
-/// double-or-treble dart - same wedges-only rule as [AnyDoubleTarget]
-/// and [AnyTrebleTarget].
+/// a white single, and one red-or-green segment. The bull counts towards
+/// the red-or-green dart too: the outer bull (25) is green, the inner
+/// bull/double bull (50) is red - same colours [dartColour] already
+/// assigns them.
 class ThreeColoursTarget extends HalfItTarget {
   const ThreeColoursTarget();
 
@@ -182,18 +182,12 @@ class ThreeColoursTarget extends HalfItTarget {
   @override
   HalfItResult evaluate(List<Throw> darts) {
     if (darts.length != 3) return HalfItResult.miss;
-    final blacks = darts
-        .where((d) =>
-            dartColour(d.actualSegment, d.multiplier) == DartColour.black)
-        .length;
-    final whites = darts
-        .where((d) =>
-            dartColour(d.actualSegment, d.multiplier) == DartColour.white)
-        .length;
-    final ringHits = darts
-        .where((d) =>
-            d.actualSegment != bullSegment &&
-            (d.multiplier == 2 || d.multiplier == 3))
+    final colours =
+        darts.map((d) => dartColour(d.actualSegment, d.multiplier)).toList();
+    final blacks = colours.where((c) => c == DartColour.black).length;
+    final whites = colours.where((c) => c == DartColour.white).length;
+    final ringHits = colours
+        .where((c) => c == DartColour.red || c == DartColour.green)
         .length;
     final hit = blacks == 1 && whites == 1 && ringHits == 1;
     return HalfItResult(hit: hit, points: hit ? _sumFaceValue(darts) : 0);
