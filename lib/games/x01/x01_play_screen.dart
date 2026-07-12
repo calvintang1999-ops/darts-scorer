@@ -7,6 +7,7 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/player_card.dart';
+import '../../widgets/quit_game_scope.dart';
 import '../../widgets/segment_input_pad.dart';
 import 'x01_game.dart';
 
@@ -134,51 +135,59 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
                   ],
                 );
 
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('${game.config.startingScore} · '
-                  '${game.currentPlayer.name} to throw'),
-              actions: [
-                // Undo lives in the app bar so it is ALWAYS on screen,
-                // in both orientations, even on the winner panel.
-                IconButton(
-                  onPressed: game.canUndo ? game.undo : null,
-                  icon: const Icon(Icons.undo),
-                  tooltip: 'Undo last dart',
-                ),
-              ],
-            ),
-            body: SafeArea(
-              child: OrientationBuilder(
-                builder: (context, orientation) {
-                  if (orientation == Orientation.landscape) {
-                    // Landscape: scores on the left, pad on the right.
-                    return Row(
-                      children: [
-                        Expanded(child: scoreboard),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding:
-                                const EdgeInsets.all(SpacingTokens.sm),
-                            child: inputArea,
+          // Nothing to lose by leaving a fresh game or one already won.
+          final confirmBeforeLeaving = !game.isFinished &&
+              (game.turnHistory.isNotEmpty ||
+                  game.currentTurnThrows.isNotEmpty);
+
+          return QuitGameScope(
+            confirmBeforeLeaving: confirmBeforeLeaving,
+            child: Scaffold(
+              appBar: AppBar(
+                title: Text('${game.config.startingScore} · '
+                    '${game.currentPlayer.name} to throw'),
+                actions: [
+                  // Undo lives in the app bar so it is ALWAYS on screen,
+                  // in both orientations, even on the winner panel.
+                  IconButton(
+                    onPressed: game.canUndo ? game.undo : null,
+                    icon: const Icon(Icons.undo),
+                    tooltip: 'Undo last dart',
+                  ),
+                ],
+              ),
+              body: SafeArea(
+                child: OrientationBuilder(
+                  builder: (context, orientation) {
+                    if (orientation == Orientation.landscape) {
+                      // Landscape: scores on the left, pad on the right.
+                      return Row(
+                        children: [
+                          Expanded(child: scoreboard),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding:
+                                  const EdgeInsets.all(SpacingTokens.sm),
+                              child: inputArea,
+                            ),
                           ),
+                        ],
+                      );
+                    }
+                    // Portrait: scores above, pad pinned to the bottom
+                    // where thumbs can reach it.
+                    return Column(
+                      children: [
+                        scoreboard,
+                        const Spacer(),
+                        Padding(
+                          padding: const EdgeInsets.all(SpacingTokens.sm),
+                          child: inputArea,
                         ),
                       ],
                     );
-                  }
-                  // Portrait: scores above, pad pinned to the bottom where
-                  // thumbs can reach it.
-                  return Column(
-                    children: [
-                      scoreboard,
-                      const Spacer(),
-                      Padding(
-                        padding: const EdgeInsets.all(SpacingTokens.sm),
-                        child: inputArea,
-                      ),
-                    ],
-                  );
-                },
+                  },
+                ),
               ),
             ),
           );

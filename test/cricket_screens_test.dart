@@ -98,4 +98,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('leaving a fresh game skips the quit confirmation',
+      (tester) async {
+    await startGame(tester);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    // No progress yet, so back navigates straight to Home with no dialog.
+    expect(find.text('Quit game?'), findsNothing);
+    expect(find.text('Cricket setup'), findsNothing);
+    expect(find.byType(AppBar), findsOneWidget); // Home's app bar
+  });
+
+  testWidgets(
+      'leaving a game in progress asks for confirmation before quitting',
+      (tester) async {
+    await startGame(tester);
+    await tapPadKey(tester, '20'); // some progress to lose
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Quit game?'), findsOneWidget);
+    expect(
+        find.text('Your progress will be lost.'), findsOneWidget);
+
+    // Cancel: dialog closes, still on the play screen with the mark kept.
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Quit game?'), findsNothing);
+    expect(find.textContaining('to throw'), findsOneWidget);
+
+    // Try again and actually quit this time.
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Quit'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('to throw'), findsNothing);
+  });
 }

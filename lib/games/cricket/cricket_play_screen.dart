@@ -7,6 +7,7 @@ import '../../services/storage_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/quit_game_scope.dart';
 import '../../widgets/score_display.dart';
 import '../../widgets/segment_input_pad.dart';
 import 'cricket_config.dart';
@@ -102,55 +103,64 @@ class _CricketPlayScreenState extends State<CricketPlayScreen> {
                   ],
                 );
 
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(
-                '${game.config.mode == CricketMode.cutthroat ? 'Cutthroat' : 'Cricket'} '
-                '· ${game.currentPlayer.name} to throw',
-              ),
-              actions: [
-                // Undo lives in the app bar so it is ALWAYS on screen,
-                // in both orientations, even on the winner panel.
-                IconButton(
-                  onPressed: game.canUndo ? game.undo : null,
-                  icon: const Icon(Icons.undo),
-                  tooltip: 'Undo last dart',
+          // Nothing to lose by leaving a fresh game or one already won.
+          final confirmBeforeLeaving = !game.isFinished &&
+              (game.turnHistory.isNotEmpty ||
+                  game.currentTurnThrows.isNotEmpty);
+
+          return QuitGameScope(
+            confirmBeforeLeaving: confirmBeforeLeaving,
+            child: Scaffold(
+              appBar: AppBar(
+                title: Text(
+                  '${game.config.mode == CricketMode.cutthroat ? 'Cutthroat' : 'Cricket'} '
+                  '· ${game.currentPlayer.name} to throw',
                 ),
-              ],
-            ),
-            body: SafeArea(
-              child: OrientationBuilder(
-                builder: (context, orientation) {
-                  if (orientation == Orientation.landscape) {
-                    // Landscape: board on the left, pad on the right.
-                    return Row(
+                actions: [
+                  // Undo lives in the app bar so it is ALWAYS on screen,
+                  // in both orientations, even on the winner panel.
+                  IconButton(
+                    onPressed: game.canUndo ? game.undo : null,
+                    icon: const Icon(Icons.undo),
+                    tooltip: 'Undo last dart',
+                  ),
+                ],
+              ),
+              body: SafeArea(
+                child: OrientationBuilder(
+                  builder: (context, orientation) {
+                    if (orientation == Orientation.landscape) {
+                      // Landscape: board on the left, pad on the right.
+                      return Row(
+                        children: [
+                          Expanded(child: board),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding:
+                                  const EdgeInsets.all(SpacingTokens.sm),
+                              child: inputArea,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    // Portrait: board above, pad pinned to the bottom
+                    // where thumbs can reach it. The pad renders at its
+                    // natural size so every key stays fully tappable;
+                    // the board gets whatever's left and scrolls
+                    // internally if a seven-number board doesn't fit a
+                    // short phone screen.
+                    return Column(
                       children: [
                         Expanded(child: board),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding:
-                                const EdgeInsets.all(SpacingTokens.sm),
-                            child: inputArea,
-                          ),
+                        Padding(
+                          padding: const EdgeInsets.all(SpacingTokens.sm),
+                          child: inputArea,
                         ),
                       ],
                     );
-                  }
-                  // Portrait: board above, pad pinned to the bottom where
-                  // thumbs can reach it. The pad renders at its natural
-                  // size so every key stays fully tappable; the board
-                  // gets whatever's left and scrolls internally if a
-                  // seven-number board doesn't fit a short phone screen.
-                  return Column(
-                    children: [
-                      Expanded(child: board),
-                      Padding(
-                        padding: const EdgeInsets.all(SpacingTokens.sm),
-                        child: inputArea,
-                      ),
-                    ],
-                  );
-                },
+                  },
+                ),
               ),
             ),
           );
