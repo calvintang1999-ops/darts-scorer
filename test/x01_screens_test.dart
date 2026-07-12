@@ -62,4 +62,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('to throw'), findsNothing);
   });
+
+  testWidgets('play screen renders without overflow in landscape',
+      (tester) async {
+    await startGame(tester);
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(800, 400));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('play screen renders without overflow in portrait',
+      (tester) async {
+    await startGame(tester);
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // A shorter portrait phone - the scoreboard + status bar + pad
+    // easily exceed 600px of usable height, so this is the real stress
+    // case (it caught a pre-existing overflow: the pad's fixed-size tap
+    // targets didn't fit under a bare Spacer).
+    await tester.binding.setSurfaceSize(const Size(400, 600));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }

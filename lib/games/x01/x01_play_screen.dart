@@ -175,16 +175,33 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
                       );
                     }
                     // Portrait: scores above, pad pinned to the bottom
-                    // where thumbs can reach it.
-                    return Column(
-                      children: [
-                        scoreboard,
-                        const Spacer(),
-                        Padding(
-                          padding: const EdgeInsets.all(SpacingTokens.sm),
-                          child: inputArea,
-                        ),
-                      ],
+                    // where thumbs can reach it on a normal phone. The
+                    // ConstrainedBox + scroll view combination means a
+                    // screen too short to fit both scrolls instead of
+                    // overflowing, without giving up the bottom-pinned
+                    // layout on every screen tall enough to not need it.
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                scoreboard,
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.all(SpacingTokens.sm),
+                                  child: inputArea,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
