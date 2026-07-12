@@ -110,11 +110,21 @@ class _HalfItPlayScreenState extends State<HalfItPlayScreen> {
                   turnDarts: i == game.currentPlayerIndex
                       ? [for (final t in game.currentTurnThrows) t.label]
                       : const [],
-                  detail:
-                      'Round ${game.currentRoundIndex + 1}/${game.targets.length}',
                 ),
               ),
             ),
+          );
+
+          // The round's target on its own banner, big enough to read from
+          // the oche - the app bar title alone is too small and too easy
+          // to truncate on a narrow phone. Round progress lives here too
+          // instead of repeating on every player's card.
+          final topContent = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!game.isFinished) _TargetBanner(game: game),
+              scoreboard,
+            ],
           );
 
           final inputArea = game.isFinished
@@ -142,8 +152,7 @@ class _HalfItPlayScreenState extends State<HalfItPlayScreen> {
               appBar: AppBar(
                 title: Text(game.isFinished
                     ? 'Half It'
-                    : '${game.currentTarget.label} · '
-                        '${game.currentPlayer.name} to throw'),
+                    : '${game.currentPlayer.name} to throw'),
                 actions: [
                   // Undo lives in the app bar so it is ALWAYS on screen,
                   // in both orientations, even on the winner panel.
@@ -158,24 +167,32 @@ class _HalfItPlayScreenState extends State<HalfItPlayScreen> {
                 child: OrientationBuilder(
                   builder: (context, orientation) {
                     if (orientation == Orientation.landscape) {
-                      // Landscape: scores on the left, pad on the right.
-                      return Row(
+                      // Landscape: banner across the top, scores on the
+                      // left, pad on the right.
+                      return Column(
                         children: [
-                          Expanded(child: scoreboard),
+                          if (!game.isFinished) _TargetBanner(game: game),
                           Expanded(
-                            child: SingleChildScrollView(
-                              padding:
-                                  const EdgeInsets.all(SpacingTokens.sm),
-                              child: inputArea,
+                            child: Row(
+                              children: [
+                                Expanded(child: scoreboard),
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.all(
+                                        SpacingTokens.sm),
+                                    child: inputArea,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       );
                     }
-                    // Portrait: scores above, pad pinned to the bottom
-                    // where thumbs can reach it on a normal phone. The
-                    // ConstrainedBox + scroll view combination means a
-                    // screen too short to fit both scrolls instead of
+                    // Portrait: banner + scores above, pad pinned to the
+                    // bottom where thumbs can reach it on a normal phone.
+                    // The ConstrainedBox + scroll view combination means
+                    // a screen too short to fit both scrolls instead of
                     // overflowing, without giving up the bottom-pinned
                     // layout on every screen tall enough to not need it.
                     return LayoutBuilder(
@@ -189,7 +206,7 @@ class _HalfItPlayScreenState extends State<HalfItPlayScreen> {
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
                               children: [
-                                scoreboard,
+                                topContent,
                                 Padding(
                                   padding:
                                       const EdgeInsets.all(SpacingTokens.sm),
@@ -207,6 +224,45 @@ class _HalfItPlayScreenState extends State<HalfItPlayScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// The current round's target, on its own banner - big enough to read
+/// standing back from the board, not buried in the app bar title.
+class _TargetBanner extends StatelessWidget {
+  const _TargetBanner({required this.game});
+
+  final HalfItGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      color: scheme.primaryContainer,
+      padding: const EdgeInsets.symmetric(
+          vertical: SpacingTokens.sm, horizontal: SpacingTokens.md),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'ROUND ${game.currentRoundIndex + 1} OF ${game.targets.length}',
+            style: AppTypography.label.copyWith(
+              color: scheme.onPrimaryContainer.withValues(alpha: 0.7),
+            ),
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              game.currentTarget.label,
+              style: AppTypography.scoreLarge
+                  .copyWith(color: scheme.onPrimaryContainer),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }

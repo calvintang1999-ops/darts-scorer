@@ -1,3 +1,4 @@
+import 'package:darts/games/halfit/halfit_play_screen.dart';
 import 'package:darts/main.dart';
 import 'package:darts/services/storage_service.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +35,23 @@ void main() {
     // Fresh game: everyone starts at the configured starting score (20).
     expect(find.text('20'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'the current target is shown on its own banner, not just the title',
+      (tester) async {
+    await startGame(tester);
+
+    final game =
+        tester.widget<HalfItPlayScreen>(find.byType(HalfItPlayScreen)).game;
+
+    // The banner shows round progress and the target's own label as a
+    // standalone, prominent element.
+    expect(find.text('ROUND 1 OF 10'), findsOneWidget);
+    expect(find.text(game.currentTarget.label), findsOneWidget);
+    // The app bar title no longer duplicates the target label - just
+    // whose throw it is.
+    expect(find.text('${game.currentPlayer.name} to throw'), findsOneWidget);
   });
 
   testWidgets('throwing a full turn updates the score and undo reverts it',
