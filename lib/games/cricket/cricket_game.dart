@@ -36,9 +36,18 @@ class CricketGame extends DartsGame {
   /// from this turn - a hook for a "GREAT!"-style celebration in the UI.
   bool closedThreeThisTurn = false;
 
+  /// True once the current player has closed three different numbers in
+  /// this turn - the classic "White Horse". A bigger hook than
+  /// [closedThreeThisTurn], which only needs one number closed.
+  bool whiteHorse = false;
+
   /// Marks snapshot from the start of the current turn, used to work out
   /// [closedThreeThisTurn].
   late Map<int, List<int>> _startOfTurnMarks;
+
+  /// Distinct numbers the current player has newly closed so far this
+  /// turn, used to work out [whiteHorse].
+  Set<int> _numbersClosedThisTurn = {};
 
   Player? _winner;
 
@@ -66,10 +75,14 @@ class CricketGame extends DartsGame {
     if (isFinished) return;
     _snapshots.add(_takeSnapshot());
     statusMessage = null;
-    // The flag from a previous turn's closing dart lives until the first
-    // dart of the next turn, so the UI has a chance to see it - see the
+    // The flags from a previous turn's closing dart live until the first
+    // dart of the next turn, so the UI has a chance to see them - see the
     // comment on _beginTurn.
-    if (currentTurnThrows.isEmpty) closedThreeThisTurn = false;
+    if (currentTurnThrows.isEmpty) {
+      closedThreeThisTurn = false;
+      whiteHorse = false;
+      _numbersClosedThisTurn = {};
+    }
 
     final playerIndex = currentPlayerIndex;
     final segment = dartThrow.actualSegment;
@@ -112,6 +125,15 @@ class CricketGame extends DartsGame {
       if (numberMarks[playerIndex] - _startOfTurnMarks[segment]![playerIndex] >=
           3) {
         closedThreeThisTurn = true;
+      }
+
+      // A White Horse needs three *different* numbers closed this turn,
+      // so only count a number the moment it newly reaches 3 marks.
+      if (before < 3 && numberMarks[playerIndex] == 3) {
+        _numbersClosedThisTurn.add(segment);
+        if (_numbersClosedThisTurn.length >= 3) {
+          whiteHorse = true;
+        }
       }
     }
 
@@ -183,6 +205,8 @@ class CricketGame extends DartsGame {
         currentPlayerIndex: currentPlayerIndex,
         startOfTurnMarks: _copyMarks(_startOfTurnMarks),
         closedThreeThisTurn: closedThreeThisTurn,
+        whiteHorse: whiteHorse,
+        numbersClosedThisTurn: Set.of(_numbersClosedThisTurn),
         turnHistoryLength: turnHistory.length,
         winner: _winner,
         statusMessage: statusMessage,
@@ -195,6 +219,8 @@ class CricketGame extends DartsGame {
     currentPlayerIndex = s.currentPlayerIndex;
     _startOfTurnMarks = _copyMarks(s.startOfTurnMarks);
     closedThreeThisTurn = s.closedThreeThisTurn;
+    whiteHorse = s.whiteHorse;
+    _numbersClosedThisTurn = Set.of(s.numbersClosedThisTurn);
     // Throws never leave history on their own, so undoing just means
     // trimming it back to its old length.
     turnHistory.removeRange(s.turnHistoryLength, turnHistory.length);
@@ -212,6 +238,8 @@ class _CricketSnapshot {
     required this.currentPlayerIndex,
     required this.startOfTurnMarks,
     required this.closedThreeThisTurn,
+    required this.whiteHorse,
+    required this.numbersClosedThisTurn,
     required this.turnHistoryLength,
     required this.winner,
     required this.statusMessage,
@@ -223,6 +251,8 @@ class _CricketSnapshot {
   final int currentPlayerIndex;
   final Map<int, List<int>> startOfTurnMarks;
   final bool closedThreeThisTurn;
+  final bool whiteHorse;
+  final Set<int> numbersClosedThisTurn;
   final int turnHistoryLength;
   final Player? winner;
   final String? statusMessage;

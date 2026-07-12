@@ -7,15 +7,20 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   late Player p0;
   late Player p1;
+  late Player p2;
 
   setUp(() {
     p0 = Player.create('P0');
     p1 = Player.create('P1');
+    p2 = Player.create('P2');
   });
 
   CricketGame newGame({CricketMode mode = CricketMode.standard}) =>
       CricketGame(players: [p0, p1], config: CricketConfig(mode: mode));
 
+  // Throws always apply to whoever's turn it actually is (players[0]
+  // goes first), regardless of which Player is passed here - same as
+  // X01. The player argument just labels the dart for readability.
   void throwDart(CricketGame game, Player player, int segment, int multiplier) {
     game.applyThrow(Throw(
       player: player,
@@ -25,67 +30,90 @@ void main() {
     ));
   }
 
-  test('closing a number scores nothing, hitting it again scores points', () {
+  test('a treble closes a number in one dart', () {
     final game = newGame();
-    // P0 closes 20 with three singles - no points yet.
-    throwDart(game, p0, 20, 1);
-    throwDart(game, p0, 20, 1);
-    throwDart(game, p0, 20, 1);
+    throwDart(game, p0, 20, 3);
     expect(game.marks[20]![0], 3);
-    expect(game.scores[0], 0);
+    expect(game.scores[0], 0); // exactly closes it - no excess to score
+  });
 
-    // P1's turn: three misses elsewhere so 20 stays open for P1.
-    throwDart(game, p1, 5, 1);
-    throwDart(game, p1, 5, 1);
-    throwDart(game, p1, 5, 1);
-
-    // P0 hits 20 again - now scores because P1 hasn't closed it.
-    throwDart(game, p0, 20, 1);
+  test('hits beyond three score points', () {
+    final game = newGame();
+    throwDart(game, p0, 20, 3); // closes 20 with no excess
+    throwDart(game, p0, 20, 1); // opponent hasn't closed it - this scores
     expect(game.scores[0], 20);
   });
 
-  test('closing with excess marks scores the excess immediately', () {
+  test('standard mode only scores when an opponent has not closed the number',
+      () {
     final game = newGame();
-    // P0 gets 2 marks on 19 first.
-    throwDart(game, p0, 19, 1);
-    throwDart(game, p0, 19, 1);
-    throwDart(game, p0, 5, 1); // filler dart, ends turn
-
-    throwDart(game, p1, 5, 1);
-    throwDart(game, p1, 5, 1);
-    throwDart(game, p1, 5, 1);
-
-    // A treble closes the last mark and scores 2 marks' worth of excess.
-    throwDart(game, p0, 19, 3);
-    expect(game.marks[19]![0], 3);
-    expect(game.scores[0], 2 * 19);
-  });
-
-  test('cutthroat routes points to opponents, not the thrower', () {
-    final game = newGame(mode: CricketMode.cutthroat);
+    // P0 closes 20.
     throwDart(game, p0, 20, 1);
     throwDart(game, p0, 20, 1);
     throwDart(game, p0, 20, 1);
+    // P1 closes 20 too - now nobody has it open any more.
+    throwDart(game, p1, 20, 1);
+    throwDart(game, p1, 20, 1);
+    throwDart(game, p1, 20, 1);
 
-    throwDart(game, p1, 5, 1);
-    throwDart(game, p1, 5, 1);
-    throwDart(game, p1, 5, 1);
-
+    // P0 hits 20 again - a dead dart, since every player has closed it.
     throwDart(game, p0, 20, 1);
-    expect(game.scores[1], 20);
     expect(game.scores[0], 0);
   });
 
-  test('winner must not be behind on points when all numbers are closed', () {
+  test('cutthroat points land on opponents still open, not on ones who '
+      'have closed the number', () {
+    final game = CricketGame(
+      players: [p0, p1, p2],
+      config: const CricketConfig(mode: CricketMode.cutthroat),
+    );
+
+    // P0 closes 20.
+    throwDart(game, p0, 20, 1);
+    throwDart(game, p0, 20, 1);
+    throwDart(game, p0, 20, 1);
+    // P1 closes 20 too - P1 is now immune to points on this number.
+    throwDart(game, p1, 20, 1);
+    throwDart(game, p1, 20, 1);
+    throwDart(game, p1, 20, 1);
+    // P2's turn: leaves 20 untouched, so it's still open for P2.
+    throwDart(game, p2, 5, 1);
+    throwDart(game, p2, 5, 1);
+    throwDart(game, p2, 5, 1);
+
+    // P0 hits 20 again with a treble - 3 excess marks' worth of points
+    // pile onto P2 (still open) but not P1 (already closed), and P0's
+    // own score doesn't move either.
+    throwDart(game, p0, 20, 3);
+    expect(game.scores[2], 60);
+    expect(game.scores[1], 0);
+    expect(game.scores[0], 0);
+  });
+
+  test('a closed number is immune to cutthroat points', () {
+    final game = newGame(mode: CricketMode.cutthroat);
+    // P0 closes 20.
+    throwDart(game, p0, 20, 1);
+    throwDart(game, p0, 20, 1);
+    throwDart(game, p0, 20, 1);
+    // P1 closes 20 too - fully closed now.
+    throwDart(game, p1, 20, 1);
+    throwDart(game, p1, 20, 1);
+    throwDart(game, p1, 20, 1);
+
+    // P0 hits 20 again - a dead dart, same as in standard mode.
+    throwDart(game, p0, 20, 1);
+    expect(game.scores[0], 0);
+    expect(game.scores[1], 0);
+  });
+
+  test('you cannot win while behind on points (standard)', () {
     // A 2-number match (20 and 19) keeps this scenario short: turns are
     // always 3 darts, and a match win is checked after every single dart.
     final game = CricketGame(
       players: [p0, p1],
       config: const CricketConfig(lowNumber: 19, includeBull: false),
     );
-
-    // Throws apply to whoever's turn it is (players[0] = P0 goes first),
-    // regardless of the Player passed on the Throw - same as X01.
 
     // P0's turn: close 20 and bank 40 excess points (two singles then a
     // treble - the treble supplies 2 marks' worth of excess once closed).
@@ -99,7 +127,6 @@ void main() {
     throwDart(game, p1, 20, 1);
     throwDart(game, p1, 20, 1);
     throwDart(game, p1, 20, 1);
-    expect(game.scores[1], 0);
 
     // P0's turn: a dead turn that doesn't touch 19, so it's still open
     // for P0 when P1 closes it next.
@@ -113,7 +140,7 @@ void main() {
     throwDart(game, p1, 19, 1);
     throwDart(game, p1, 19, 1);
     expect(game.marks[19]![1], 3);
-    expect(game.isFinished, isFalse);
+    expect(game.isFinished, isFalse); // closed everything, but behind
 
     // P0's turn: another dead turn.
     throwDart(game, p0, 5, 1);
@@ -128,46 +155,7 @@ void main() {
     expect(game.winner, p1);
   });
 
-  test('undo reverts a single dart, including its marks', () {
-    final game = newGame();
-    throwDart(game, p0, 20, 3);
-    expect(game.marks[20]![0], 3);
-    expect(game.canUndo, isTrue);
-
-    game.undo();
-    expect(game.marks[20]![0], 0);
-    expect(game.currentTurnThrows, isEmpty);
-    expect(game.canUndo, isFalse);
-  });
-
-  test('undo walks back across a turn boundary', () {
-    final game = newGame();
-    throwDart(game, p0, 20, 1);
-    throwDart(game, p0, 20, 1);
-    throwDart(game, p0, 20, 1); // 3rd dart ends P0's turn
-    expect(game.currentPlayerIndex, 1);
-    expect(game.currentTurnThrows, isEmpty);
-
-    game.undo();
-    expect(game.currentPlayerIndex, 0);
-    expect(game.currentTurnThrows.length, 2);
-    expect(game.marks[20]![0], 2);
-  });
-
-  test('closedThreeThisTurn fires only when a number is closed within the turn',
-      () {
-    final game = newGame();
-    expect(game.closedThreeThisTurn, isFalse);
-
-    throwDart(game, p0, 20, 1);
-    throwDart(game, p0, 20, 1);
-    expect(game.closedThreeThisTurn, isFalse);
-
-    throwDart(game, p0, 20, 1); // 3rd single closes 20 within this turn
-    expect(game.closedThreeThisTurn, isTrue);
-  });
-
-  test('cutthroat win also respects the not-behind check', () {
+  test('you cannot win while behind on points (cutthroat)', () {
     final game = CricketGame(
       players: [p0, p1],
       config: const CricketConfig(
@@ -208,5 +196,59 @@ void main() {
     expect(game.scores[1], 57);
     expect(game.isFinished, isTrue);
     expect(game.winner, p0);
+  });
+
+  test('the White Horse flag fires when three numbers close in one turn',
+      () {
+    final game = newGame();
+    expect(game.whiteHorse, isFalse);
+
+    throwDart(game, p0, 20, 3); // closes 20
+    expect(game.whiteHorse, isFalse);
+
+    throwDart(game, p0, 19, 3); // closes 19 - two numbers so far
+    expect(game.whiteHorse, isFalse);
+
+    throwDart(game, p0, 18, 3); // closes 18 - three numbers this turn
+    expect(game.whiteHorse, isTrue);
+  });
+
+  test('undo reverts a single dart, including its marks', () {
+    final game = newGame();
+    throwDart(game, p0, 20, 3);
+    expect(game.marks[20]![0], 3);
+    expect(game.canUndo, isTrue);
+
+    game.undo();
+    expect(game.marks[20]![0], 0);
+    expect(game.currentTurnThrows, isEmpty);
+    expect(game.canUndo, isFalse);
+  });
+
+  test('undo walks back across a turn boundary', () {
+    final game = newGame();
+    throwDart(game, p0, 20, 1);
+    throwDart(game, p0, 20, 1);
+    throwDart(game, p0, 20, 1); // 3rd dart ends P0's turn
+    expect(game.currentPlayerIndex, 1);
+    expect(game.currentTurnThrows, isEmpty);
+
+    game.undo();
+    expect(game.currentPlayerIndex, 0);
+    expect(game.currentTurnThrows.length, 2);
+    expect(game.marks[20]![0], 2);
+  });
+
+  test('closedThreeThisTurn fires only when a number is closed within the turn',
+      () {
+    final game = newGame();
+    expect(game.closedThreeThisTurn, isFalse);
+
+    throwDart(game, p0, 20, 1);
+    throwDart(game, p0, 20, 1);
+    expect(game.closedThreeThisTurn, isFalse);
+
+    throwDart(game, p0, 20, 1); // 3rd single closes 20 within this turn
+    expect(game.closedThreeThisTurn, isTrue);
   });
 }
