@@ -1,5 +1,6 @@
 import '../models/game_definition.dart';
 import 'cricket/cricket_definition.dart';
+import 'halfit/halfit_definition.dart';
 import 'round_the_clock/round_the_clock_definition.dart';
 import 'split_score/split_score_definition.dart';
 import 'x01/x01_definition.dart';
@@ -10,6 +11,7 @@ import 'x01/x01_definition.dart';
 final List<GameDefinition> gameRegistry = [
   x01Definition,
   cricketDefinition,
+  halfItDefinition,
   splitScoreDefinition,
   roundTheClockDefinition,
 ];
