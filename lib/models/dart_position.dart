@@ -40,6 +40,32 @@ const int bullSegment = 25;
 /// The segment value used for a miss (dart missed the scoring area entirely).
 const int missSegment = 0;
 
+/// A dart's physical colour on a standard board. Singles alternate black
+/// and white wedge-by-wedge; the double/treble ring above a black wedge
+/// is red, above a white wedge is green. Used by games that care about
+/// board colour (e.g. Half It's "3 Colours" round) - never by scoring,
+/// which only ever reads segment + multiplier.
+enum DartColour { black, white, red, green }
+
+/// Works out a dart's colour from the segment it hit and its multiplier.
+/// Null for a miss (nothing was hit, so there's no colour). No colour
+/// data is stored on [Throw] - callers derive it on demand from
+/// `actualSegment` + `multiplier`, same as scoring does.
+DartColour? dartColour(int segment, int multiplier) {
+  if (segment == missSegment) return null;
+  if (segment == bullSegment) {
+    // Inner bull (the 50) is red, outer bull (the 25) is green.
+    return multiplier == 2 ? DartColour.red : DartColour.green;
+  }
+  final wedgeIndex = BoardGeometry.segmentsClockwiseFromTop.indexOf(segment);
+  if (wedgeIndex == -1) return null; // not a real segment - defensive only
+  final isBlackWedge = wedgeIndex.isEven;
+  if (multiplier == 1) {
+    return isBlackWedge ? DartColour.black : DartColour.white;
+  }
+  return isBlackWedge ? DartColour.red : DartColour.green;
+}
+
 /// What a dart position resolves to: a segment number and a multiplier.
 class SegmentHit {
   const SegmentHit(this.segment, this.multiplier);
