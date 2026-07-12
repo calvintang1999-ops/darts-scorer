@@ -78,7 +78,11 @@ class HalfItGame extends DartsGame {
 
     currentTurnThrows.add(dartThrow);
 
-    if (currentTurnThrows.length >= 3) {
+    // A full turn always ends the round, but some targets (e.g. hitting
+    // an exact score) can be unambiguously decided sooner - no point
+    // asking for darts that can't change the outcome.
+    if (currentTurnThrows.length >= 3 ||
+        currentTarget.isEarlyHit(currentTurnThrows)) {
       _evaluateTurn();
     }
     notifyListeners();

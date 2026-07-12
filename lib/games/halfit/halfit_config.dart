@@ -27,13 +27,23 @@ class HalfItResult {
 abstract class HalfItTarget {
   const HalfItTarget();
 
-  /// Short human label for the UI, e.g. "20", "Any Treble", "3 Colours".
+  /// Human label for the UI, unambiguous about what kind of target it is
+  /// - e.g. "Target segment: 20" and "Target score: 41" read very
+  /// differently even though both are just a number.
   String get label;
 
   /// Universal scoring rule: points = the total face value of whichever
   /// darts in [darts] qualify for this target. What "qualifies" means is
   /// entirely up to the target.
   HalfItResult evaluate(List<Throw> darts);
+
+  /// True if [dartsSoFar] (fewer than a full turn) already unambiguously
+  /// satisfies this target, so the game can end the turn early instead
+  /// of making the player throw darts that can't change the outcome -
+  /// e.g. reaching an exact score in 2 darts. Only safe for targets
+  /// where more qualifying darts can only ever help, never hurt; most
+  /// targets need the full turn to judge, so this defaults to false.
+  bool isEarlyHit(List<Throw> dartsSoFar) => false;
 }
 
 int _sumFaceValue(List<Throw> darts) =>
@@ -47,7 +57,7 @@ class NumberTarget extends HalfItTarget {
   final int number;
 
   @override
-  String get label => '$number';
+  String get label => 'Target segment: $number';
 
   @override
   HalfItResult evaluate(List<Throw> darts) {
@@ -113,21 +123,28 @@ class BullseyeTarget extends HalfItTarget {
   }
 }
 
-/// All 3 darts must total exactly [total] (e.g. 41, 82, 123), or the
-/// whole turn misses.
+/// The darts thrown must total exactly [total] (e.g. 41, 82, 123).
+/// Reaching it in fewer than 3 darts is an immediate hit - see
+/// [isEarlyHit] - so a full turn only ever needs evaluating on a miss.
 class ExactScoreTarget extends HalfItTarget {
   const ExactScoreTarget(this.total);
 
   final int total;
 
   @override
-  String get label => '$total';
+  String get label => 'Target score: $total';
 
   @override
   HalfItResult evaluate(List<Throw> darts) {
-    final hit = darts.length == 3 && _sumFaceValue(darts) == total;
+    final hit = _sumFaceValue(darts) == total;
     return HalfItResult(hit: hit, points: hit ? total : 0);
   }
+
+  @override
+  bool isEarlyHit(List<Throw> dartsSoFar) =>
+      dartsSoFar.isNotEmpty &&
+      dartsSoFar.length < 3 &&
+      _sumFaceValue(dartsSoFar) == total;
 }
 
 /// All 3 darts must total [threshold] or more, or the whole turn misses.
@@ -137,7 +154,7 @@ class ScoreAtLeastTarget extends HalfItTarget {
   final int threshold;
 
   @override
-  String get label => '$threshold+';
+  String get label => 'Target score: $threshold+';
 
   @override
   HalfItResult evaluate(List<Throw> darts) {
@@ -156,7 +173,7 @@ class ScoreAtMostOnBoardTarget extends HalfItTarget {
   final int max;
 
   @override
-  String get label => '≤$max';
+  String get label => 'Target score: ≤$max';
 
   @override
   HalfItResult evaluate(List<Throw> darts) {
@@ -236,8 +253,9 @@ class BlackWhiteBlackTarget extends HalfItTarget {
 /// Every target a randomized match can draw rounds from. The bull is
 /// deliberately excluded here - it's always appended as the match's
 /// final round instead, never drawn at random into an earlier one.
+/// Numbers are limited to 15-20, the standard Half It range.
 final List<HalfItTarget> halfItTargetPool = [
-  for (var n = 1; n <= 20; n++) NumberTarget(n),
+  for (var n = 15; n <= 20; n++) NumberTarget(n),
   const AnyDoubleTarget(),
   const AnyTrebleTarget(),
   const ExactScoreTarget(41),

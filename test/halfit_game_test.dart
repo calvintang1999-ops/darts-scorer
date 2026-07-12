@@ -281,5 +281,83 @@ void main() {
       expect(game.targets.sublist(0, 4).any((t) => t is BullseyeTarget),
           isFalse);
     });
+
+    test('the random pool only draws numbers 15-20', () {
+      final numberTargets =
+          halfItTargetPool.whereType<NumberTarget>().toList();
+      expect(numberTargets.map((t) => t.number).toSet(), {15, 16, 17, 18, 19, 20});
+    });
+  });
+
+  group('labels', () {
+    test('number and score targets say what kind of target they are', () {
+      expect(const NumberTarget(20).label, 'Target segment: 20');
+      expect(const ExactScoreTarget(41).label, 'Target score: 41');
+      expect(const ScoreAtLeastTarget(65).label, 'Target score: 65+');
+      expect(const ScoreAtMostOnBoardTarget(10).label, 'Target score: ≤10');
+    });
+  });
+
+  group('early hit', () {
+    test('an exact score reached in fewer than 3 darts ends the turn '
+        'immediately', () {
+      final game = HalfItGame(
+        players: [p0],
+        config: const HalfItConfig(
+          sequenceType: HalfItSequenceType.fixed,
+          fixedSequence: [ExactScoreTarget(41)],
+        ),
+      );
+
+      throwDart(game, p0, 13, 3); // T13 = 39
+      expect(game.isFinished, isFalse);
+      expect(game.currentTurnThrows.length, 1);
+
+      throwDart(game, p0, 1, 2); // D1 = 2, total now exactly 41
+      // The turn (and, with only 1 round, the match) ended after 2 darts
+      // - no 3rd dart was needed or requested.
+      expect(game.currentTurnThrows, isEmpty);
+      expect(game.scores[0], 20 + 41);
+      expect(game.isFinished, isTrue);
+      expect(game.turnHistory.single.throws.length, 2);
+    });
+
+    test('an early hit mid-match advances to the next player, not just '
+        'the end of the match', () {
+      final game = HalfItGame(
+        players: [p0, p1],
+        config: const HalfItConfig(
+          sequenceType: HalfItSequenceType.fixed,
+          fixedSequence: [ExactScoreTarget(41), NumberTarget(20)],
+        ),
+      );
+
+      throwDart(game, p0, 13, 3); // T13 = 39
+      throwDart(game, p0, 1, 2); // D1 = 2, total exactly 41 - early hit
+      expect(game.isFinished, isFalse);
+      expect(game.currentPlayerIndex, 1); // moved on to P1
+      expect(game.currentRoundIndex, 0); // still round 0 - P1 hasn't gone
+      expect(game.scores[0], 20 + 41);
+    });
+
+    test('an exact score NOT yet reached after 2 darts keeps the turn open',
+        () {
+      final game = HalfItGame(
+        players: [p0],
+        config: const HalfItConfig(
+          sequenceType: HalfItSequenceType.fixed,
+          fixedSequence: [ExactScoreTarget(41)],
+        ),
+      );
+
+      throwDart(game, p0, 5, 1); // 5, nowhere near 41
+      throwDart(game, p0, 5, 1); // 10 total - still not 41
+      expect(game.isFinished, isFalse);
+      expect(game.currentTurnThrows.length, 2); // still waiting on dart 3
+
+      throwDart(game, p0, 5, 1); // 15 total - misses on the 3rd dart
+      expect(game.isFinished, isTrue);
+      expect(game.scores[0], 20 ~/ 2);
+    });
   });
 }
