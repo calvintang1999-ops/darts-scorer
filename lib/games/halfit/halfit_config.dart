@@ -69,8 +69,8 @@ class NumberTarget extends HalfItTarget {
   }
 }
 
-/// Any double on a numbered wedge (the double bull is its own [Bullseye]
-/// round, not "any double").
+/// Any double, on a numbered wedge or the inner/double bull (50) - it's
+/// still a double ring, same as any other.
 class AnyDoubleTarget extends HalfItTarget {
   const AnyDoubleTarget();
 
@@ -79,8 +79,7 @@ class AnyDoubleTarget extends HalfItTarget {
 
   @override
   HalfItResult evaluate(List<Throw> darts) {
-    final qualifying = darts
-        .where((d) => d.multiplier == 2 && d.actualSegment != bullSegment);
+    final qualifying = darts.where((d) => d.multiplier == 2);
     return HalfItResult(
       hit: qualifying.isNotEmpty,
       points: _sumFaceValue(qualifying.toList()),
@@ -88,7 +87,8 @@ class AnyDoubleTarget extends HalfItTarget {
   }
 }
 
-/// Any treble on a numbered wedge.
+/// Any treble on a numbered wedge (there's no treble bull, so this never
+/// matches the bull in practice).
 class AnyTrebleTarget extends HalfItTarget {
   const AnyTrebleTarget();
 
@@ -97,8 +97,7 @@ class AnyTrebleTarget extends HalfItTarget {
 
   @override
   HalfItResult evaluate(List<Throw> darts) {
-    final qualifying = darts
-        .where((d) => d.multiplier == 3 && d.actualSegment != bullSegment);
+    final qualifying = darts.where((d) => d.multiplier == 3);
     return HalfItResult(
       hit: qualifying.isNotEmpty,
       points: _sumFaceValue(qualifying.toList()),
