@@ -99,6 +99,7 @@ class DriftStorageService implements StorageService {
                   landingAngleDegrees: Value(landing?.angleDegrees),
                   landingCoordVersion:
                       Value(landing?.boardCoordinateSystemVersion),
+                  intendedTarget: Value(dartThrow.intendedTarget),
                 ),
               );
         }
@@ -186,6 +187,7 @@ class DriftStorageService implements StorageService {
       source: ThrowSource.values.byName(row.source),
       resultingScoreDelta: row.resultingScoreDelta,
       landingPosition: landingPosition,
+      intendedTarget: row.intendedTarget,
       timestamp: row.timestamp,
     );
   }

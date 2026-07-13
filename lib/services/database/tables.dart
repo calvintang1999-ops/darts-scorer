@@ -84,4 +84,9 @@ class Throws extends Table {
   RealColumn get landingRadius => real().nullable()();
   RealColumn get landingAngleDegrees => real().nullable()();
   IntColumn get landingCoordVersion => integer().nullable()();
+
+  /// Mirrors Throw.intendedTarget - added in schema version 2. Null
+  /// everywhere except Round the Clock, which fills it in with the
+  /// player's target at the moment they threw.
+  IntColumn get intendedTarget => integer().nullable()();
 }

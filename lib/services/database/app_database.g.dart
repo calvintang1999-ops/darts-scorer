@@ -1529,6 +1529,17 @@ class $ThrowsTable extends Throws with TableInfo<$ThrowsTable, ThrowRow> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _intendedTargetMeta = const VerificationMeta(
+    'intendedTarget',
+  );
+  @override
+  late final GeneratedColumn<int> intendedTarget = GeneratedColumn<int>(
+    'intended_target',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1542,6 +1553,7 @@ class $ThrowsTable extends Throws with TableInfo<$ThrowsTable, ThrowRow> {
     landingRadius,
     landingAngleDegrees,
     landingCoordVersion,
+    intendedTarget,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1647,6 +1659,15 @@ class $ThrowsTable extends Throws with TableInfo<$ThrowsTable, ThrowRow> {
         ),
       );
     }
+    if (data.containsKey('intended_target')) {
+      context.handle(
+        _intendedTargetMeta,
+        intendedTarget.isAcceptableOrUnknown(
+          data['intended_target']!,
+          _intendedTargetMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1700,6 +1721,10 @@ class $ThrowsTable extends Throws with TableInfo<$ThrowsTable, ThrowRow> {
         DriftSqlType.int,
         data['${effectivePrefix}landing_coord_version'],
       ),
+      intendedTarget: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}intended_target'],
+      ),
     );
   }
 
@@ -1728,6 +1753,11 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
   final double? landingRadius;
   final double? landingAngleDegrees;
   final int? landingCoordVersion;
+
+  /// Mirrors Throw.intendedTarget - added in schema version 2. Null
+  /// everywhere except Round the Clock, which fills it in with the
+  /// player's target at the moment they threw.
+  final int? intendedTarget;
   const ThrowRow({
     required this.id,
     required this.turnId,
@@ -1740,6 +1770,7 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
     this.landingRadius,
     this.landingAngleDegrees,
     this.landingCoordVersion,
+    this.intendedTarget,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1760,6 +1791,9 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
     }
     if (!nullToAbsent || landingCoordVersion != null) {
       map['landing_coord_version'] = Variable<int>(landingCoordVersion);
+    }
+    if (!nullToAbsent || intendedTarget != null) {
+      map['intended_target'] = Variable<int>(intendedTarget);
     }
     return map;
   }
@@ -1783,6 +1817,9 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
       landingCoordVersion: landingCoordVersion == null && nullToAbsent
           ? const Value.absent()
           : Value(landingCoordVersion),
+      intendedTarget: intendedTarget == null && nullToAbsent
+          ? const Value.absent()
+          : Value(intendedTarget),
     );
   }
 
@@ -1809,6 +1846,7 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
       landingCoordVersion: serializer.fromJson<int?>(
         json['landingCoordVersion'],
       ),
+      intendedTarget: serializer.fromJson<int?>(json['intendedTarget']),
     );
   }
   @override
@@ -1826,6 +1864,7 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
       'landingRadius': serializer.toJson<double?>(landingRadius),
       'landingAngleDegrees': serializer.toJson<double?>(landingAngleDegrees),
       'landingCoordVersion': serializer.toJson<int?>(landingCoordVersion),
+      'intendedTarget': serializer.toJson<int?>(intendedTarget),
     };
   }
 
@@ -1841,6 +1880,7 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
     Value<double?> landingRadius = const Value.absent(),
     Value<double?> landingAngleDegrees = const Value.absent(),
     Value<int?> landingCoordVersion = const Value.absent(),
+    Value<int?> intendedTarget = const Value.absent(),
   }) => ThrowRow(
     id: id ?? this.id,
     turnId: turnId ?? this.turnId,
@@ -1859,6 +1899,9 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
     landingCoordVersion: landingCoordVersion.present
         ? landingCoordVersion.value
         : this.landingCoordVersion,
+    intendedTarget: intendedTarget.present
+        ? intendedTarget.value
+        : this.intendedTarget,
   );
   ThrowRow copyWithCompanion(ThrowsCompanion data) {
     return ThrowRow(
@@ -1885,6 +1928,9 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
       landingCoordVersion: data.landingCoordVersion.present
           ? data.landingCoordVersion.value
           : this.landingCoordVersion,
+      intendedTarget: data.intendedTarget.present
+          ? data.intendedTarget.value
+          : this.intendedTarget,
     );
   }
 
@@ -1901,7 +1947,8 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
           ..write('source: $source, ')
           ..write('landingRadius: $landingRadius, ')
           ..write('landingAngleDegrees: $landingAngleDegrees, ')
-          ..write('landingCoordVersion: $landingCoordVersion')
+          ..write('landingCoordVersion: $landingCoordVersion, ')
+          ..write('intendedTarget: $intendedTarget')
           ..write(')'))
         .toString();
   }
@@ -1919,6 +1966,7 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
     landingRadius,
     landingAngleDegrees,
     landingCoordVersion,
+    intendedTarget,
   );
   @override
   bool operator ==(Object other) =>
@@ -1934,7 +1982,8 @@ class ThrowRow extends DataClass implements Insertable<ThrowRow> {
           other.source == this.source &&
           other.landingRadius == this.landingRadius &&
           other.landingAngleDegrees == this.landingAngleDegrees &&
-          other.landingCoordVersion == this.landingCoordVersion);
+          other.landingCoordVersion == this.landingCoordVersion &&
+          other.intendedTarget == this.intendedTarget);
 }
 
 class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
@@ -1949,6 +1998,7 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
   final Value<double?> landingRadius;
   final Value<double?> landingAngleDegrees;
   final Value<int?> landingCoordVersion;
+  final Value<int?> intendedTarget;
   const ThrowsCompanion({
     this.id = const Value.absent(),
     this.turnId = const Value.absent(),
@@ -1961,6 +2011,7 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
     this.landingRadius = const Value.absent(),
     this.landingAngleDegrees = const Value.absent(),
     this.landingCoordVersion = const Value.absent(),
+    this.intendedTarget = const Value.absent(),
   });
   ThrowsCompanion.insert({
     this.id = const Value.absent(),
@@ -1974,6 +2025,7 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
     this.landingRadius = const Value.absent(),
     this.landingAngleDegrees = const Value.absent(),
     this.landingCoordVersion = const Value.absent(),
+    this.intendedTarget = const Value.absent(),
   }) : turnId = Value(turnId),
        timestamp = Value(timestamp),
        actualSegment = Value(actualSegment),
@@ -1993,6 +2045,7 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
     Expression<double>? landingRadius,
     Expression<double>? landingAngleDegrees,
     Expression<int>? landingCoordVersion,
+    Expression<int>? intendedTarget,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2009,6 +2062,7 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
         'landing_angle_degrees': landingAngleDegrees,
       if (landingCoordVersion != null)
         'landing_coord_version': landingCoordVersion,
+      if (intendedTarget != null) 'intended_target': intendedTarget,
     });
   }
 
@@ -2024,6 +2078,7 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
     Value<double?>? landingRadius,
     Value<double?>? landingAngleDegrees,
     Value<int?>? landingCoordVersion,
+    Value<int?>? intendedTarget,
   }) {
     return ThrowsCompanion(
       id: id ?? this.id,
@@ -2037,6 +2092,7 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
       landingRadius: landingRadius ?? this.landingRadius,
       landingAngleDegrees: landingAngleDegrees ?? this.landingAngleDegrees,
       landingCoordVersion: landingCoordVersion ?? this.landingCoordVersion,
+      intendedTarget: intendedTarget ?? this.intendedTarget,
     );
   }
 
@@ -2078,6 +2134,9 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
     if (landingCoordVersion.present) {
       map['landing_coord_version'] = Variable<int>(landingCoordVersion.value);
     }
+    if (intendedTarget.present) {
+      map['intended_target'] = Variable<int>(intendedTarget.value);
+    }
     return map;
   }
 
@@ -2094,7 +2153,8 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
           ..write('source: $source, ')
           ..write('landingRadius: $landingRadius, ')
           ..write('landingAngleDegrees: $landingAngleDegrees, ')
-          ..write('landingCoordVersion: $landingCoordVersion')
+          ..write('landingCoordVersion: $landingCoordVersion, ')
+          ..write('intendedTarget: $intendedTarget')
           ..write(')'))
         .toString();
   }
@@ -2902,6 +2962,7 @@ typedef $$ThrowsTableCreateCompanionBuilder =
       Value<double?> landingRadius,
       Value<double?> landingAngleDegrees,
       Value<int?> landingCoordVersion,
+      Value<int?> intendedTarget,
     });
 typedef $$ThrowsTableUpdateCompanionBuilder =
     ThrowsCompanion Function({
@@ -2916,6 +2977,7 @@ typedef $$ThrowsTableUpdateCompanionBuilder =
       Value<double?> landingRadius,
       Value<double?> landingAngleDegrees,
       Value<int?> landingCoordVersion,
+      Value<int?> intendedTarget,
     });
 
 class $$ThrowsTableFilterComposer
@@ -2979,6 +3041,11 @@ class $$ThrowsTableFilterComposer
 
   ColumnFilters<int> get landingCoordVersion => $composableBuilder(
     column: $table.landingCoordVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get intendedTarget => $composableBuilder(
+    column: $table.intendedTarget,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3046,6 +3113,11 @@ class $$ThrowsTableOrderingComposer
     column: $table.landingCoordVersion,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get intendedTarget => $composableBuilder(
+    column: $table.intendedTarget,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ThrowsTableAnnotationComposer
@@ -3101,6 +3173,11 @@ class $$ThrowsTableAnnotationComposer
     column: $table.landingCoordVersion,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get intendedTarget => $composableBuilder(
+    column: $table.intendedTarget,
+    builder: (column) => column,
+  );
 }
 
 class $$ThrowsTableTableManager
@@ -3142,6 +3219,7 @@ class $$ThrowsTableTableManager
                 Value<double?> landingRadius = const Value.absent(),
                 Value<double?> landingAngleDegrees = const Value.absent(),
                 Value<int?> landingCoordVersion = const Value.absent(),
+                Value<int?> intendedTarget = const Value.absent(),
               }) => ThrowsCompanion(
                 id: id,
                 turnId: turnId,
@@ -3154,6 +3232,7 @@ class $$ThrowsTableTableManager
                 landingRadius: landingRadius,
                 landingAngleDegrees: landingAngleDegrees,
                 landingCoordVersion: landingCoordVersion,
+                intendedTarget: intendedTarget,
               ),
           createCompanionCallback:
               ({
@@ -3168,6 +3247,7 @@ class $$ThrowsTableTableManager
                 Value<double?> landingRadius = const Value.absent(),
                 Value<double?> landingAngleDegrees = const Value.absent(),
                 Value<int?> landingCoordVersion = const Value.absent(),
+                Value<int?> intendedTarget = const Value.absent(),
               }) => ThrowsCompanion.insert(
                 id: id,
                 turnId: turnId,
@@ -3180,6 +3260,7 @@ class $$ThrowsTableTableManager
                 landingRadius: landingRadius,
                 landingAngleDegrees: landingAngleDegrees,
                 landingCoordVersion: landingCoordVersion,
+                intendedTarget: intendedTarget,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

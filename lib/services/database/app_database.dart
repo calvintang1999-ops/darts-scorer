@@ -20,24 +20,30 @@ class AppDatabase extends _$AppDatabase {
 
   /// Bump this and add a step to [migration] whenever a table changes
   /// shape. See the class doc on [migration] for how that works.
+  ///
+  /// Version 2 added Throws.intendedTarget.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   /// Drift calls exactly one of these the first time the app runs against
   /// a given database file:
   /// - [MigrationStrategy.onCreate] fires on a brand new file. It always
   ///   builds today's schema directly - it never replays old migrations.
   /// - [MigrationStrategy.onUpgrade] fires on a device that already has an
-  ///   older database file, and steps it forward version by version.
-  ///
-  /// Right now there's only ever been one schema (version 1), so there is
-  /// nothing to upgrade from yet - `onUpgrade` will gain steps as the
-  /// schema evolves.
+  ///   older database file, and steps it forward version by version. `from`
+  ///   is the version that file was last opened with; `to` is
+  ///   [schemaVersion]. Each `if` below is one step in that staircase, so a
+  ///   database several versions behind runs every step in order.
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
           await _seedDefaultPlayer();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(throws, throws.intendedTarget);
+          }
         },
       );
 

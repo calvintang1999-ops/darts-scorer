@@ -99,7 +99,12 @@ class RoundTheClockGame extends DartsGame {
       advancedStepsThisTurn += movedBy;
     }
 
-    currentTurnThrows.add(dartThrow.copyWith(resultingScoreDelta: movedBy));
+    // intendedTarget records what they were aiming at *before* this dart
+    // moved them, not wherever they ended up.
+    currentTurnThrows.add(dartThrow.copyWith(
+      resultingScoreDelta: movedBy,
+      intendedTarget: stops[index].segment,
+    ));
 
     if (currentIndex[playerIndex] >= stops.length) {
       _winner = players[playerIndex];
