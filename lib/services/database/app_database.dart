@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -17,6 +18,11 @@ part 'app_database.g.dart';
 @DriftDatabase(tables: [Players, Matches, MatchPlayers, Turns, Throws])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+
+  /// Lets tests point this at an in-memory database (see
+  /// `NativeDatabase.memory()`) instead of a real file on disk.
+  @visibleForTesting
+  AppDatabase.forTesting(super.executor);
 
   /// Bump this and add a step to [migration] whenever a table changes
   /// shape. See the class doc on [migration] for how that works.

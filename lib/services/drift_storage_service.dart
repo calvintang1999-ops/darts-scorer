@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show OrderingTerm, Value;
+import 'package:meta/meta.dart';
 
 import '../models/dart_position.dart';
 import '../models/match_record.dart';
@@ -13,6 +14,11 @@ import 'storage_service.dart';
 /// no game or screen code needs to know this class exists.
 class DriftStorageService implements StorageService {
   DriftStorageService() : _db = AppDatabase();
+
+  /// Lets tests pass in an [AppDatabase] backed by an in-memory database
+  /// (see [AppDatabase.forTesting]) instead of a real file on disk.
+  @visibleForTesting
+  DriftStorageService.forTesting(AppDatabase db) : _db = db;
 
   final AppDatabase _db;
 

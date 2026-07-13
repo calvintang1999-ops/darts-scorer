@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'player.dart';
 import 'throw.dart';
+import 'unique_id.dart';
 
 /// The base class every game mode extends (X01 now; Cricket, Shanghai,
 /// training routines, etc. later).
@@ -16,8 +17,7 @@ import 'throw.dart';
 /// and [undo].
 abstract class DartsGame extends ChangeNotifier {
   DartsGame({required this.players, String? gameId})
-      // Microseconds-since-epoch is unique enough for one local device.
-      : gameId = gameId ?? DateTime.now().microsecondsSinceEpoch.toString();
+      : gameId = gameId ?? generateLocalId();
 
   /// Identifies this match; stamped onto every Throw.
   final String gameId;
