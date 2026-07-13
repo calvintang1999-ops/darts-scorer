@@ -28,6 +28,16 @@ class Matches extends Table {
   TextColumn get winnerName => text().nullable()();
   DateTimeColumn get finishedAt => dateTime()();
 
+  /// A snapshot of the small handful of config values (e.g. X01's
+  /// startingScore/outRule, Cricket's lowNumber/includeBull) needed to
+  /// correctly interpret this match's throws for stats later - added in
+  /// schema version 3. Stored as a JSON object, not parsed columns, since
+  /// each game needs different fields. This is provenance data (like
+  /// gameName), not a computed aggregate - nothing here is ever a stat
+  /// itself. Null for matches saved before this column existed; stats
+  /// calculators fall back to that game's own config defaults then.
+  TextColumn get configJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

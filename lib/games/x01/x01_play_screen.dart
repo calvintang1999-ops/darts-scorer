@@ -73,6 +73,10 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
           players: game.players,
           turnHistory: List.of(game.turnHistory),
           winnerId: game.winner?.id,
+          config: {
+            'startingScore': game.config.startingScore,
+            'outRule': game.config.outRule.name,
+          },
         ));
   }
 

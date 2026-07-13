@@ -319,6 +319,17 @@ class $MatchesTable extends Matches with TableInfo<$MatchesTable, MatchRow> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _configJsonMeta = const VerificationMeta(
+    'configJson',
+  );
+  @override
+  late final GeneratedColumn<String> configJson = GeneratedColumn<String>(
+    'config_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -326,6 +337,7 @@ class $MatchesTable extends Matches with TableInfo<$MatchesTable, MatchRow> {
     winnerId,
     winnerName,
     finishedAt,
+    configJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -372,6 +384,12 @@ class $MatchesTable extends Matches with TableInfo<$MatchesTable, MatchRow> {
     } else if (isInserting) {
       context.missing(_finishedAtMeta);
     }
+    if (data.containsKey('config_json')) {
+      context.handle(
+        _configJsonMeta,
+        configJson.isAcceptableOrUnknown(data['config_json']!, _configJsonMeta),
+      );
+    }
     return context;
   }
 
@@ -401,6 +419,10 @@ class $MatchesTable extends Matches with TableInfo<$MatchesTable, MatchRow> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}finished_at'],
       )!,
+      configJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}config_json'],
+      ),
     );
   }
 
@@ -416,12 +438,23 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
   final String? winnerId;
   final String? winnerName;
   final DateTime finishedAt;
+
+  /// A snapshot of the small handful of config values (e.g. X01's
+  /// startingScore/outRule, Cricket's lowNumber/includeBull) needed to
+  /// correctly interpret this match's throws for stats later - added in
+  /// schema version 3. Stored as a JSON object, not parsed columns, since
+  /// each game needs different fields. This is provenance data (like
+  /// gameName), not a computed aggregate - nothing here is ever a stat
+  /// itself. Null for matches saved before this column existed; stats
+  /// calculators fall back to that game's own config defaults then.
+  final String? configJson;
   const MatchRow({
     required this.id,
     required this.gameName,
     this.winnerId,
     this.winnerName,
     required this.finishedAt,
+    this.configJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -435,6 +468,9 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
       map['winner_name'] = Variable<String>(winnerName);
     }
     map['finished_at'] = Variable<DateTime>(finishedAt);
+    if (!nullToAbsent || configJson != null) {
+      map['config_json'] = Variable<String>(configJson);
+    }
     return map;
   }
 
@@ -449,6 +485,9 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
           ? const Value.absent()
           : Value(winnerName),
       finishedAt: Value(finishedAt),
+      configJson: configJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(configJson),
     );
   }
 
@@ -463,6 +502,7 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
       winnerId: serializer.fromJson<String?>(json['winnerId']),
       winnerName: serializer.fromJson<String?>(json['winnerName']),
       finishedAt: serializer.fromJson<DateTime>(json['finishedAt']),
+      configJson: serializer.fromJson<String?>(json['configJson']),
     );
   }
   @override
@@ -474,6 +514,7 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
       'winnerId': serializer.toJson<String?>(winnerId),
       'winnerName': serializer.toJson<String?>(winnerName),
       'finishedAt': serializer.toJson<DateTime>(finishedAt),
+      'configJson': serializer.toJson<String?>(configJson),
     };
   }
 
@@ -483,12 +524,14 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
     Value<String?> winnerId = const Value.absent(),
     Value<String?> winnerName = const Value.absent(),
     DateTime? finishedAt,
+    Value<String?> configJson = const Value.absent(),
   }) => MatchRow(
     id: id ?? this.id,
     gameName: gameName ?? this.gameName,
     winnerId: winnerId.present ? winnerId.value : this.winnerId,
     winnerName: winnerName.present ? winnerName.value : this.winnerName,
     finishedAt: finishedAt ?? this.finishedAt,
+    configJson: configJson.present ? configJson.value : this.configJson,
   );
   MatchRow copyWithCompanion(MatchesCompanion data) {
     return MatchRow(
@@ -501,6 +544,9 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
       finishedAt: data.finishedAt.present
           ? data.finishedAt.value
           : this.finishedAt,
+      configJson: data.configJson.present
+          ? data.configJson.value
+          : this.configJson,
     );
   }
 
@@ -511,14 +557,15 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
           ..write('gameName: $gameName, ')
           ..write('winnerId: $winnerId, ')
           ..write('winnerName: $winnerName, ')
-          ..write('finishedAt: $finishedAt')
+          ..write('finishedAt: $finishedAt, ')
+          ..write('configJson: $configJson')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(id, gameName, winnerId, winnerName, finishedAt);
+      Object.hash(id, gameName, winnerId, winnerName, finishedAt, configJson);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -527,7 +574,8 @@ class MatchRow extends DataClass implements Insertable<MatchRow> {
           other.gameName == this.gameName &&
           other.winnerId == this.winnerId &&
           other.winnerName == this.winnerName &&
-          other.finishedAt == this.finishedAt);
+          other.finishedAt == this.finishedAt &&
+          other.configJson == this.configJson);
 }
 
 class MatchesCompanion extends UpdateCompanion<MatchRow> {
@@ -536,6 +584,7 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
   final Value<String?> winnerId;
   final Value<String?> winnerName;
   final Value<DateTime> finishedAt;
+  final Value<String?> configJson;
   final Value<int> rowid;
   const MatchesCompanion({
     this.id = const Value.absent(),
@@ -543,6 +592,7 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
     this.winnerId = const Value.absent(),
     this.winnerName = const Value.absent(),
     this.finishedAt = const Value.absent(),
+    this.configJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MatchesCompanion.insert({
@@ -551,6 +601,7 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
     this.winnerId = const Value.absent(),
     this.winnerName = const Value.absent(),
     required DateTime finishedAt,
+    this.configJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        gameName = Value(gameName),
@@ -561,6 +612,7 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
     Expression<String>? winnerId,
     Expression<String>? winnerName,
     Expression<DateTime>? finishedAt,
+    Expression<String>? configJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -569,6 +621,7 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
       if (winnerId != null) 'winner_id': winnerId,
       if (winnerName != null) 'winner_name': winnerName,
       if (finishedAt != null) 'finished_at': finishedAt,
+      if (configJson != null) 'config_json': configJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -579,6 +632,7 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
     Value<String?>? winnerId,
     Value<String?>? winnerName,
     Value<DateTime>? finishedAt,
+    Value<String?>? configJson,
     Value<int>? rowid,
   }) {
     return MatchesCompanion(
@@ -587,6 +641,7 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
       winnerId: winnerId ?? this.winnerId,
       winnerName: winnerName ?? this.winnerName,
       finishedAt: finishedAt ?? this.finishedAt,
+      configJson: configJson ?? this.configJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -609,6 +664,9 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
     if (finishedAt.present) {
       map['finished_at'] = Variable<DateTime>(finishedAt.value);
     }
+    if (configJson.present) {
+      map['config_json'] = Variable<String>(configJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -623,6 +681,7 @@ class MatchesCompanion extends UpdateCompanion<MatchRow> {
           ..write('winnerId: $winnerId, ')
           ..write('winnerName: $winnerName, ')
           ..write('finishedAt: $finishedAt, ')
+          ..write('configJson: $configJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2344,6 +2403,7 @@ typedef $$MatchesTableCreateCompanionBuilder =
       Value<String?> winnerId,
       Value<String?> winnerName,
       required DateTime finishedAt,
+      Value<String?> configJson,
       Value<int> rowid,
     });
 typedef $$MatchesTableUpdateCompanionBuilder =
@@ -2353,6 +2413,7 @@ typedef $$MatchesTableUpdateCompanionBuilder =
       Value<String?> winnerId,
       Value<String?> winnerName,
       Value<DateTime> finishedAt,
+      Value<String?> configJson,
       Value<int> rowid,
     });
 
@@ -2387,6 +2448,11 @@ class $$MatchesTableFilterComposer
 
   ColumnFilters<DateTime> get finishedAt => $composableBuilder(
     column: $table.finishedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get configJson => $composableBuilder(
+    column: $table.configJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2424,6 +2490,11 @@ class $$MatchesTableOrderingComposer
     column: $table.finishedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get configJson => $composableBuilder(
+    column: $table.configJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MatchesTableAnnotationComposer
@@ -2451,6 +2522,11 @@ class $$MatchesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get finishedAt => $composableBuilder(
     column: $table.finishedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get configJson => $composableBuilder(
+    column: $table.configJson,
     builder: (column) => column,
   );
 }
@@ -2488,6 +2564,7 @@ class $$MatchesTableTableManager
                 Value<String?> winnerId = const Value.absent(),
                 Value<String?> winnerName = const Value.absent(),
                 Value<DateTime> finishedAt = const Value.absent(),
+                Value<String?> configJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MatchesCompanion(
                 id: id,
@@ -2495,6 +2572,7 @@ class $$MatchesTableTableManager
                 winnerId: winnerId,
                 winnerName: winnerName,
                 finishedAt: finishedAt,
+                configJson: configJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2504,6 +2582,7 @@ class $$MatchesTableTableManager
                 Value<String?> winnerId = const Value.absent(),
                 Value<String?> winnerName = const Value.absent(),
                 required DateTime finishedAt,
+                Value<String?> configJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MatchesCompanion.insert(
                 id: id,
@@ -2511,6 +2590,7 @@ class $$MatchesTableTableManager
                 winnerId: winnerId,
                 winnerName: winnerName,
                 finishedAt: finishedAt,
+                configJson: configJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

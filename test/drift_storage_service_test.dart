@@ -84,6 +84,7 @@ void main() {
       players: [alice, bob],
       turnHistory: [leg1Turn, leg2Turn],
       winnerId: bob.id,
+      config: const {'startingTarget': 1, 'sequence': 'plusBothBulls'},
     );
 
     await storage.saveMatch(match);
@@ -114,6 +115,25 @@ void main() {
     final secondThrow = loaded.turnHistory[1].throws.single;
     expect(secondThrow.intendedTarget, 7);
     expect(secondThrow.landingPosition, isNull);
+
+    expect(loaded.config, {'startingTarget': 1, 'sequence': 'plusBothBulls'});
+  });
+
+  test('a match saved without a config snapshot loads with config null',
+      () async {
+    final alice = Player.create('Alice');
+    final match = MatchRecord(
+      gameId: 'match-3',
+      gameName: 'cricket',
+      players: [alice],
+      turnHistory: const [],
+      winnerId: null,
+    );
+    await storage.saveMatch(match);
+
+    final loaded =
+        (await storage.loadMatchHistory()).singleWhere((m) => m.gameId == 'match-3');
+    expect(loaded.config, isNull);
   });
 
   test('a deleted player does not break their saved match history',

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show OrderingTerm, Value;
 import 'package:meta/meta.dart';
 
@@ -62,6 +64,8 @@ class DriftStorageService implements StorageService {
               winnerId: Value(match.winnerId),
               winnerName: Value(_winnerName(match)),
               finishedAt: match.finishedAt,
+              configJson: Value(
+                  match.config == null ? null : jsonEncode(match.config)),
             ),
           );
 
@@ -160,6 +164,9 @@ class DriftStorageService implements StorageService {
         turnHistory: turns,
         winnerId: matchRow.winnerId,
         finishedAt: matchRow.finishedAt,
+        config: matchRow.configJson == null
+            ? null
+            : jsonDecode(matchRow.configJson!) as Map<String, Object?>,
       ));
     }
     return records;

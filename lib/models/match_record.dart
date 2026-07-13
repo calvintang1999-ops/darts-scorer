@@ -11,6 +11,7 @@ class MatchRecord {
     required this.players,
     required this.turnHistory,
     required this.winnerId,
+    this.config,
     DateTime? finishedAt,
   }) : finishedAt = finishedAt ?? DateTime.now();
 
@@ -26,4 +27,12 @@ class MatchRecord {
   final String? winnerId;
 
   final DateTime finishedAt;
+
+  /// A snapshot of the handful of config values (e.g. X01's
+  /// startingScore/outRule) needed to correctly interpret this match's
+  /// throws for stats - see lib/services/stats/. Not a computed aggregate,
+  /// just provenance data, same category as gameName. Null for matches
+  /// saved before this existed; stats calculators fall back to that
+  /// game's own config defaults in that case.
+  final Map<String, Object?>? config;
 }

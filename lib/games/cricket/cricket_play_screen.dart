@@ -57,6 +57,10 @@ class _CricketPlayScreenState extends State<CricketPlayScreen> {
           players: game.players,
           turnHistory: List.of(game.turnHistory),
           winnerId: game.winner?.id,
+          config: {
+            'lowNumber': game.config.lowNumber,
+            'includeBull': game.config.includeBull,
+          },
         ));
   }
 

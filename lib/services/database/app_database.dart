@@ -27,9 +27,10 @@ class AppDatabase extends _$AppDatabase {
   /// Bump this and add a step to [migration] whenever a table changes
   /// shape. See the class doc on [migration] for how that works.
   ///
-  /// Version 2 added Throws.intendedTarget.
+  /// Version 2 added Throws.intendedTarget. Version 3 added
+  /// Matches.configJson.
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Drift calls exactly one of these the first time the app runs against
   /// a given database file:
@@ -49,6 +50,9 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.addColumn(throws, throws.intendedTarget);
+          }
+          if (from < 3) {
+            await m.addColumn(matches, matches.configJson);
           }
         },
       );

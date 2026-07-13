@@ -77,6 +77,11 @@ class _RoundTheClockPlayScreenState extends State<RoundTheClockPlayScreen> {
           players: game.players,
           turnHistory: List.of(game.turnHistory),
           winnerId: game.winner?.id,
+          config: {
+            'sequence': game.config.sequence.name,
+            'multiplierRule': game.config.multiplierRule.name,
+            'startingTarget': game.config.startingTarget,
+          },
         ));
   }
 

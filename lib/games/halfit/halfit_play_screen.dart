@@ -73,6 +73,7 @@ class _HalfItPlayScreenState extends State<HalfItPlayScreen> {
           players: game.players,
           turnHistory: List.of(game.turnHistory),
           winnerId: game.winner?.id,
+          config: {'startingScore': game.config.startingScore},
         ));
   }
 
