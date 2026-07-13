@@ -15,14 +15,11 @@ class PlayersProvider extends ChangeNotifier {
   List<Player> get players => List.unmodifiable(_players);
 
   Future<void> _load() async {
+    // No seeding here - the storage implementation seeds a default player
+    // once, the first time it's ever created, so the roster can genuinely
+    // become empty (e.g. that player gets deleted) without one reappearing.
     final stored = await _storage.loadPlayers();
     _players.addAll(stored);
-    // Seed one default player so "quick start" needs zero setup on a
-    // fresh install - open X01, hit Start, play.
-    if (_players.isEmpty) {
-      _players.add(Player.create('Player 1'));
-      await _storage.savePlayers(_players);
-    }
     notifyListeners();
   }
 

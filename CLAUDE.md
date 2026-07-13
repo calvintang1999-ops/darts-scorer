@@ -44,7 +44,7 @@ them - don't simplify it away.
 - **Rich Throw model** (`lib/models/throw.dart`): timestamp, player,
   actualSegment, multiplier, resultingScoreDelta, gameId, source
   (`ThrowSource` enum: manual / camera / corrected), nullable
-  `landingPosition`, nullable `targetSegment`.
+  `landingPosition`, nullable `intendedTarget`.
 - **Scoring never reads `landingPosition`.** Games score from
   `actualSegment` + `multiplier` only. Position data is enrichment for
   stats and camera work; it stays `null` for manual entry. This is what

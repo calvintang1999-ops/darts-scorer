@@ -26,7 +26,7 @@ class Throw {
     this.source = ThrowSource.manual,
     this.resultingScoreDelta = 0,
     this.landingPosition,
-    this.targetSegment,
+    this.intendedTarget,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
 
@@ -59,7 +59,7 @@ class Throw {
 
   /// What the player was aiming at, if known (e.g. a checkout suggestion
   /// or training routine told them a target). Null when we can't know.
-  final int? targetSegment;
+  final int? intendedTarget;
 
   /// Face value of the dart (e.g. treble 20 = 60). Rules like bust or
   /// double-in decide whether this actually counts - see resultingScoreDelta.
@@ -73,7 +73,7 @@ class Throw {
     return '${prefixes[multiplier]}$actualSegment';
   }
 
-  Throw copyWith({int? resultingScoreDelta}) => Throw(
+  Throw copyWith({int? resultingScoreDelta, int? intendedTarget}) => Throw(
         timestamp: timestamp,
         player: player,
         actualSegment: actualSegment,
@@ -82,14 +82,25 @@ class Throw {
         source: source,
         resultingScoreDelta: resultingScoreDelta ?? this.resultingScoreDelta,
         landingPosition: landingPosition,
-        targetSegment: targetSegment,
+        intendedTarget: intendedTarget ?? this.intendedTarget,
       );
 }
 
 /// One player's visit to the oche: up to 3 throws.
 class Turn {
-  Turn({required this.player, required this.throws});
+  Turn({
+    required this.player,
+    required this.throws,
+    this.legNumber = 1,
+    this.setNumber = 1,
+  });
 
   final Player player;
   final List<Throw> throws;
+
+  /// Which leg/set this turn belongs to. Only X01 ever has more than one of
+  /// each - every other game mode is single-leg, single-set, so it never
+  /// passes these and both stay at their default of 1.
+  final int legNumber;
+  final int setNumber;
 }

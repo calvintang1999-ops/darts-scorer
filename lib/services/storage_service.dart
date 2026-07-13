@@ -18,8 +18,18 @@ abstract class StorageService {
 }
 
 /// Phase-1 implementation: everything lives in memory and is lost when the
-/// app closes. Good enough while we build the games themselves.
+/// app closes. Kept around (and used by tests) alongside the real
+/// DriftStorageService as a lightweight fake that needs no database.
 class InMemoryStorageService implements StorageService {
+  /// Seeds one default player, same as the real drift database does the
+  /// first time its database file is created - so a fresh in-memory
+  /// instance (e.g. in every test) starts with the same "quick start"
+  /// experience as a fresh install. Deleting this player is permanent,
+  /// same as on-device.
+  InMemoryStorageService() {
+    _players.add(Player.create('Calvin'));
+  }
+
   final List<Player> _players = [];
   final List<MatchRecord> _matches = [];
 

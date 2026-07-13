@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/home_screen.dart';
+import 'services/drift_storage_service.dart';
 import 'services/players_provider.dart';
 import 'services/settings_provider.dart';
 import 'services/storage_service.dart';
 import 'theme/theme.dart';
 
 void main() {
-  runApp(DartsApp(storage: InMemoryStorageService()));
+  runApp(DartsApp(storage: DriftStorageService()));
 }
 
 class DartsApp extends StatelessWidget {

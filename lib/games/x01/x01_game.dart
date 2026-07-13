@@ -33,6 +33,13 @@ class X01Game extends DartsGame {
   /// Who threw first this leg. Rotates each leg so nobody always goes first.
   int _legStartPlayerIndex = 0;
 
+  /// Which leg/set is currently in progress, stamped onto every [Turn] as
+  /// it's recorded so match history can be replayed leg by leg. Leg resets
+  /// to 1 at the start of each new set (see [_handleLegWin]); set counts up
+  /// for the whole match.
+  int _currentLegNumber = 0;
+  int _currentSetNumber = 1;
+
   Player? _winner;
 
   /// One-line feedback for the UI ("Bust! ...", "Alice wins the leg!").
@@ -160,8 +167,12 @@ class X01Game extends DartsGame {
 
   /// Moves the finished turn into the shared history.
   void _finishTurn() {
-    turnHistory.add(
-        Turn(player: players[currentPlayerIndex], throws: currentTurnThrows));
+    turnHistory.add(Turn(
+      player: players[currentPlayerIndex],
+      throws: currentTurnThrows,
+      legNumber: _currentLegNumber,
+      setNumber: _currentSetNumber,
+    ));
     currentTurnThrows = [];
   }
 
@@ -179,11 +190,13 @@ class X01Game extends DartsGame {
       setsWon[playerIndex]++;
       // Legs reset for everyone at the start of a new set.
       legsWon = List.filled(players.length, 0);
+      _currentLegNumber = 0;
       if (setsWon[playerIndex] >= config.setsToWin) {
         _winner = players[playerIndex];
         statusMessage = '$name wins the match!';
         return;
       }
+      _currentSetNumber++;
       statusMessage = '$name wins the set!';
     }
     // Next leg: alternate who throws first.
@@ -198,6 +211,7 @@ class X01Game extends DartsGame {
     currentTurnThrows = [];
     currentPlayerIndex = startingPlayerIndex;
     startOfTurnScore = config.startingScore;
+    _currentLegNumber++;
   }
 
   _X01Snapshot _takeSnapshot() => _X01Snapshot(
@@ -209,6 +223,8 @@ class X01Game extends DartsGame {
         currentPlayerIndex: currentPlayerIndex,
         startOfTurnScore: startOfTurnScore,
         legStartPlayerIndex: _legStartPlayerIndex,
+        currentLegNumber: _currentLegNumber,
+        currentSetNumber: _currentSetNumber,
         turnHistoryLength: turnHistory.length,
         winner: _winner,
         statusMessage: statusMessage,
@@ -223,6 +239,8 @@ class X01Game extends DartsGame {
     currentPlayerIndex = s.currentPlayerIndex;
     startOfTurnScore = s.startOfTurnScore;
     _legStartPlayerIndex = s.legStartPlayerIndex;
+    _currentLegNumber = s.currentLegNumber;
+    _currentSetNumber = s.currentSetNumber;
     // Throws never leave history on their own, so undoing just means
     // trimming it back to its old length.
     turnHistory.removeRange(s.turnHistoryLength, turnHistory.length);
@@ -242,6 +260,8 @@ class _X01Snapshot {
     required this.currentPlayerIndex,
     required this.startOfTurnScore,
     required this.legStartPlayerIndex,
+    required this.currentLegNumber,
+    required this.currentSetNumber,
     required this.turnHistoryLength,
     required this.winner,
     required this.statusMessage,
@@ -255,6 +275,8 @@ class _X01Snapshot {
   final int currentPlayerIndex;
   final int startOfTurnScore;
   final int legStartPlayerIndex;
+  final int currentLegNumber;
+  final int currentSetNumber;
   final int turnHistoryLength;
   final Player? winner;
   final String? statusMessage;
