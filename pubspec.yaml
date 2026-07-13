@@ -8,12 +8,14 @@ environment:
 
 dependencies:
   drift: ^2.34.1
+  fl_chart: ^1.2.0
   flutter:
     sdk: flutter
   meta: ^1.18.0
   path: ^1.9.1
   path_provider: ^2.1.6
   provider: ^6.1.5+1
+  share_plus: ^13.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
