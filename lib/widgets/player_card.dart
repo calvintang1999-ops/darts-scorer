@@ -14,6 +14,7 @@ class PlayerCard extends StatelessWidget {
     this.isActive = false,
     this.turnDarts = const [],
     this.detail,
+    this.progress,
   });
 
   final String name;
@@ -25,6 +26,12 @@ class PlayerCard extends StatelessWidget {
 
   /// Extra line like "Legs 2 · Sets 1". Hidden when null.
   final String? detail;
+
+  /// Fraction (0.0-1.0) for a thin progress bar under the score, e.g. how
+  /// far through a Round the Clock sequence this player has got. Hidden
+  /// when null - most games don't have a "progress through a sequence"
+  /// to show.
+  final double? progress;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +63,24 @@ class PlayerCard extends StatelessWidget {
               huge: isActive,
               color: isActive ? scheme.onPrimaryContainer : scheme.onSurface,
             ),
+            if (progress != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: SpacingTokens.xs / 2),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(RadiusTokens.sm),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: SpacingTokens.xs,
+                    backgroundColor: (isActive
+                            ? scheme.onPrimaryContainer
+                            : scheme.onSurface)
+                        .withValues(alpha: 0.15),
+                    color:
+                        isActive ? scheme.onPrimaryContainer : scheme.primary,
+                  ),
+                ),
+              ),
             // Reserve the row even when empty so cards don't jump around.
             SizedBox(
               height: SpacingTokens.lg,
