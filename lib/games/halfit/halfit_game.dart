@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../../models/darts_game.dart';
+import '../../models/game_event.dart';
 import '../../models/player.dart';
 import '../../models/throw.dart';
 import 'halfit_config.dart';
@@ -120,6 +121,7 @@ class HalfItGame extends DartsGame {
     currentTurnThrows.add(
         lastThrow.copyWith(resultingScoreDelta: scoreAfter - scoreBefore));
 
+    emitEvent(GameEventKind.visit, players[playerIndex], statusMessage!);
     _finishTurn();
 
     if (_isLastTurnOfMatch(playerIndex)) {
@@ -142,6 +144,7 @@ class HalfItGame extends DartsGame {
     }
     _winner = players[bestIndex];
     statusMessage = '${players[bestIndex].name} wins!';
+    emitEvent(GameEventKind.matchWon, players[bestIndex], statusMessage!);
   }
 
   void _finishTurn() {

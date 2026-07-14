@@ -1,4 +1,5 @@
 import '../../models/darts_game.dart';
+import '../../models/game_event.dart';
 import '../../models/player.dart';
 import '../../models/throw.dart';
 import 'checkouts.dart';
@@ -126,10 +127,19 @@ class X01Game extends DartsGame {
     currentTurnThrows
         .add(dartThrow.copyWith(resultingScoreDelta: newScore - scoreBefore));
 
+    final player = players[playerIndex];
     if (legWon) {
+      emitEvent(GameEventKind.checkout, player, '${player.name}, checkout!');
       _finishTurn();
       _handleLegWin(playerIndex);
     } else if (bust || currentTurnThrows.length >= 3) {
+      emitEvent(
+        GameEventKind.visit,
+        player,
+        bust
+            ? '${player.name}, no score'
+            : '${player.name}, you require $newScore',
+      );
       _finishTurn();
       _advanceToNextPlayer();
     }
@@ -194,6 +204,7 @@ class X01Game extends DartsGame {
       if (setsWon[playerIndex] >= config.setsToWin) {
         _winner = players[playerIndex];
         statusMessage = '$name wins the match!';
+        emitEvent(GameEventKind.matchWon, players[playerIndex], statusMessage!);
         return;
       }
       _currentSetNumber++;

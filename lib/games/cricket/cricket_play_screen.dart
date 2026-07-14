@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/dart_position.dart';
 import '../../models/match_record.dart';
+import '../../services/announcer_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -26,16 +27,21 @@ class CricketPlayScreen extends StatefulWidget {
 
 class _CricketPlayScreenState extends State<CricketPlayScreen> {
   bool _matchSaved = false;
+  // Read once in initState and cached: context.read in dispose() isn't
+  // safe, since by then the widget may already be detached from the tree.
+  late final AnnouncerService _announcer;
 
   @override
   void initState() {
     super.initState();
     widget.game.addListener(_onGameChanged);
+    _announcer = context.read<AnnouncerService>()..listenTo(widget.game);
   }
 
   @override
   void dispose() {
     widget.game.removeListener(_onGameChanged);
+    _announcer.stopListening();
     super.dispose();
   }
 

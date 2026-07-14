@@ -13,8 +13,7 @@ import '../theme/tokens.dart';
 import '../theme/typography.dart';
 import '../widgets/app_button.dart';
 
-/// App settings. Theme mode is fully wired; sound is a placeholder for
-/// the voice-announcer phase.
+/// App settings: theme mode and the voice announcer on/off toggle.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -75,8 +74,8 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: SpacingTokens.lg),
           SwitchListTile(
-            title: Text('Sound effects', style: AppTypography.body),
-            subtitle: Text('Coming with the voice announcer',
+            title: Text('Voice announcer', style: AppTypography.body),
+            subtitle: Text('Calls out visit scores, checkouts, and winners',
                 style: AppTypography.label),
             value: settings.soundEnabled,
             onChanged: settings.setSoundEnabled,

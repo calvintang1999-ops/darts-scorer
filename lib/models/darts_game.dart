@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import 'game_event.dart';
 import 'player.dart';
 import 'throw.dart';
 import 'unique_id.dart';
@@ -33,6 +36,28 @@ abstract class DartsGame extends ChangeNotifier {
   int currentPlayerIndex = 0;
 
   Player get currentPlayer => players[currentPlayerIndex];
+
+  /// Announcer-worthy moments - a finished visit, a checkout, a match win.
+  /// [notifyListeners] fires on every state change so the UI can redraw;
+  /// this stream fires only on these specific moments, worded by whichever
+  /// game emits them. The voice announcer is the only intended listener,
+  /// and it lives entirely outside this class - subclasses just describe
+  /// what happened via [emitEvent] and never import or know about it.
+  Stream<GameEvent> get events => _eventsController.stream;
+  final _eventsController = StreamController<GameEvent>.broadcast();
+
+  /// Subclasses call this right after a visit/checkout/win to describe it
+  /// in their own scoring language.
+  @protected
+  void emitEvent(GameEventKind kind, Player player, String message) {
+    _eventsController.add(GameEvent(kind: kind, player: player, message: message));
+  }
+
+  @override
+  void dispose() {
+    _eventsController.close();
+    super.dispose();
+  }
 
   /// Apply one dart to the game. Implementations should fill in the
   /// throw's `resultingScoreDelta`, update scores, handle turn changes,

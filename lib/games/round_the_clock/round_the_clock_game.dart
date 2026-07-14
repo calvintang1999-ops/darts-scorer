@@ -1,4 +1,5 @@
 import '../../models/darts_game.dart';
+import '../../models/game_event.dart';
 import '../../models/player.dart';
 import '../../models/throw.dart';
 import 'round_the_clock_config.dart';
@@ -106,11 +107,20 @@ class RoundTheClockGame extends DartsGame {
       intendedTarget: stops[index].segment,
     ));
 
+    final player = players[playerIndex];
     if (currentIndex[playerIndex] >= stops.length) {
-      _winner = players[playerIndex];
-      statusMessage = '${players[playerIndex].name} wins the match!';
+      _winner = player;
+      statusMessage = '${player.name} wins the match!';
+      emitEvent(GameEventKind.matchWon, player, statusMessage!);
       _finishTurn();
     } else if (currentTurnThrows.length >= 3) {
+      emitEvent(
+        GameEventKind.visit,
+        player,
+        advancedStepsThisTurn > 0
+            ? '${player.name} moves to ${currentTargetLabel(playerIndex)}'
+            : '${player.name}, no score',
+      );
       _finishTurn();
       _advanceToNextPlayer();
     }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../../models/darts_game.dart';
+import '../../models/game_event.dart';
 import '../../models/player.dart';
 import '../../models/throw.dart';
 import 'cricket_config.dart';
@@ -151,12 +152,35 @@ class CricketGame extends DartsGame {
     if (_hasWon(playerIndex)) {
       _winner = players[playerIndex];
       statusMessage = '${players[playerIndex].name} wins the match!';
+      emitEvent(GameEventKind.matchWon, players[playerIndex], statusMessage!);
       _finishTurn();
     } else if (currentTurnThrows.length >= 3) {
+      emitEvent(
+        GameEventKind.visit,
+        players[playerIndex],
+        _visitAnnouncement(playerIndex),
+      );
       _finishTurn();
       _advanceToNextPlayer();
     }
     notifyListeners();
+  }
+
+  /// Describes the marks the current player made this turn, e.g.
+  /// "Alice: 2 marks on 20, 1 mark on bull" - or "no marks" if nothing
+  /// landed on a Cricket number. Compares against [_startOfTurnMarks],
+  /// which is only valid until [_beginTurn] resets it for the next turn.
+  String _visitAnnouncement(int playerIndex) {
+    final parts = <String>[];
+    for (final n in numbers) {
+      final gained =
+          marks[n]![playerIndex] - _startOfTurnMarks[n]![playerIndex];
+      if (gained <= 0) continue;
+      final label = n == 25 ? 'bull' : '$n';
+      parts.add(gained == 1 ? '1 mark on $label' : '$gained marks on $label');
+    }
+    final name = players[playerIndex].name;
+    return parts.isEmpty ? '$name, no marks' : '$name: ${parts.join(', ')}';
   }
 
   @override
