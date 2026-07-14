@@ -3,16 +3,20 @@ import 'package:provider/provider.dart';
 
 import '../../models/dart_position.dart';
 import '../../models/match_record.dart';
+import '../../models/player.dart';
 import '../../services/announcer_service.dart';
 import '../../services/dart_counter_service.dart';
+import '../../services/stats/cricket_stats.dart';
 import '../../services/storage_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/match_summary_card.dart';
 import '../../widgets/quit_game_scope.dart';
 import '../../widgets/rotate_board_dialog.dart';
 import '../../widgets/score_display.dart';
 import '../../widgets/segment_input_pad.dart';
+import '../../widgets/stat_tile.dart';
 import 'cricket_config.dart';
 import 'cricket_game.dart';
 
@@ -68,17 +72,7 @@ class _CricketPlayScreenState extends State<CricketPlayScreen> {
     if (_matchSaved) return;
     _matchSaved = true;
     // Fire-and-forget: recording history must never block play.
-    context.read<StorageService>().saveMatch(MatchRecord(
-          gameId: game.gameId,
-          gameName: 'cricket',
-          players: game.players,
-          turnHistory: List.of(game.turnHistory),
-          winnerId: game.winner?.id,
-          config: {
-            'lowNumber': game.config.lowNumber,
-            'includeBull': game.config.includeBull,
-          },
-        ));
+    context.read<StorageService>().saveMatch(_buildMatchRecord(game));
   }
 
   void _rematch() {
@@ -321,6 +315,21 @@ class _CricketBoard extends StatelessWidget {
   }
 }
 
+/// The same match-record shape saved to storage, built fresh (and not
+/// persisted) whenever the winner panel wants it for its stat tiles - one
+/// definition, used both places, so they can never drift apart.
+MatchRecord _buildMatchRecord(CricketGame game) => MatchRecord(
+      gameId: game.gameId,
+      gameName: 'cricket',
+      players: game.players,
+      turnHistory: List.of(game.turnHistory),
+      winnerId: game.winner?.id,
+      config: {
+        'lowNumber': game.config.lowNumber,
+        'includeBull': game.config.includeBull,
+      },
+    );
+
 /// One line between board and pad: the match-win / White Horse message
 /// (both set on the model) takes priority, then the plain closed-number
 /// celebration, otherwise darts remaining this turn.
@@ -368,6 +377,10 @@ class _WinnerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // This match isn't in storage yet at first build (the save happens in
+    // a listener callback), so the record used for stats is built fresh
+    // here rather than read back - see _buildMatchRecord's doc comment.
+    final record = _buildMatchRecord(game);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -378,6 +391,14 @@ class _WinnerPanel extends StatelessWidget {
           style: AppTypography.scoreLarge.copyWith(color: scheme.primary),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: SpacingTokens.lg),
+        MatchSummaryCard(sections: [
+          for (final player in game.players)
+            PlayerMatchSummary(
+              playerName: player.name,
+              tiles: _cricketSummaryTiles(player, record),
+            ),
+        ]),
         const SizedBox(height: SpacingTokens.lg),
         AppButton(
             label: 'Rematch', icon: Icons.replay, onPressed: onRematch),
@@ -392,4 +413,24 @@ class _WinnerPanel extends StatelessWidget {
       ],
     );
   }
+}
+
+/// This match's headline Cricket numbers for one player - reuses the same
+/// calculator the Stats tab uses, just fed a single-match list.
+List<StatTile> _cricketSummaryTiles(Player player, MatchRecord record) {
+  final stats = CricketStats.compute(player, [record]);
+  return [
+    StatTile(
+      label: 'Marks per round',
+      value: stats.marksPerRound?.toStringAsFixed(1),
+    ),
+    StatTile(
+      label: 'Most marks in a round',
+      value: stats.mostMarksInRound?.toString(),
+    ),
+    StatTile(
+      label: 'Bulls per round',
+      value: stats.bullsPerRound?.toStringAsFixed(1),
+    ),
+  ];
 }

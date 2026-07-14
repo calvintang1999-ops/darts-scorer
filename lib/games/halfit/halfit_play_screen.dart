@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/match_record.dart';
+import '../../models/player.dart';
 import '../../services/announcer_service.dart';
 import '../../services/dart_counter_service.dart';
+import '../../services/stats/half_it_stats.dart';
 import '../../services/storage_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/match_summary_card.dart';
 import '../../widgets/player_card.dart';
 import '../../widgets/quit_game_scope.dart';
 import '../../widgets/rotate_board_dialog.dart';
 import '../../widgets/segment_input_pad.dart';
+import '../../widgets/stat_tile.dart';
 import 'halfit_game.dart';
 
 /// The live Half It scoreboard + input pad. Pass-and-play: the device is
@@ -84,14 +88,7 @@ class _HalfItPlayScreenState extends State<HalfItPlayScreen> {
     if (_matchSaved) return;
     _matchSaved = true;
     // Fire-and-forget: recording history must never block play.
-    context.read<StorageService>().saveMatch(MatchRecord(
-          gameId: game.gameId,
-          gameName: 'halfit',
-          players: game.players,
-          turnHistory: List.of(game.turnHistory),
-          winnerId: game.winner?.id,
-          config: {'startingScore': game.config.startingScore},
-        ));
+    context.read<StorageService>().saveMatch(_buildMatchRecord(game));
   }
 
   void _rematch() {
@@ -286,6 +283,18 @@ class _TargetBanner extends StatelessWidget {
   }
 }
 
+/// The same match-record shape saved to storage, built fresh (and not
+/// persisted) whenever the winner panel wants it for its stat tiles - one
+/// definition, used both places, so they can never drift apart.
+MatchRecord _buildMatchRecord(HalfItGame game) => MatchRecord(
+      gameId: game.gameId,
+      gameName: 'halfit',
+      players: game.players,
+      turnHistory: List.of(game.turnHistory),
+      winnerId: game.winner?.id,
+      config: {'startingScore': game.config.startingScore},
+    );
+
 /// One line between scoreboard and pad: the round's result takes
 /// priority (in red when the score was halved), otherwise darts left.
 class _StatusBar extends StatelessWidget {
@@ -329,6 +338,10 @@ class _WinnerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // This match isn't in storage yet at first build (the save happens in
+    // a listener callback), so the record used for stats is built fresh
+    // here rather than read back - see _buildMatchRecord's doc comment.
+    final record = _buildMatchRecord(game);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -339,6 +352,14 @@ class _WinnerPanel extends StatelessWidget {
           style: AppTypography.scoreLarge.copyWith(color: scheme.primary),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: SpacingTokens.lg),
+        MatchSummaryCard(sections: [
+          for (final player in game.players)
+            PlayerMatchSummary(
+              playerName: player.name,
+              tiles: _halfItSummaryTiles(player, record),
+            ),
+        ]),
         const SizedBox(height: SpacingTokens.lg),
         AppButton(
             label: 'Rematch', icon: Icons.replay, onPressed: onRematch),
@@ -353,4 +374,17 @@ class _WinnerPanel extends StatelessWidget {
       ],
     );
   }
+}
+
+/// This match's headline Half It numbers for one player - reuses the same
+/// calculator the Stats tab uses, just fed a single-match list.
+List<StatTile> _halfItSummaryTiles(Player player, MatchRecord record) {
+  final stats = HalfItStats.compute(player, [record]);
+  return [
+    StatTile(label: 'Final score', value: stats.bestGameScore?.toString()),
+    StatTile(
+      label: 'Rounds survived',
+      value: stats.mostSurvivedRounds?.toString(),
+    ),
+  ];
 }

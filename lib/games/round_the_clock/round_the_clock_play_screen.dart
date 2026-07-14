@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/match_record.dart';
+import '../../models/player.dart';
 import '../../services/announcer_service.dart';
 import '../../services/dart_counter_service.dart';
+import '../../services/stats/round_the_clock_stats.dart';
 import '../../services/storage_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/match_summary_card.dart';
 import '../../widgets/player_card.dart';
 import '../../widgets/quit_game_scope.dart';
 import '../../widgets/rotate_board_dialog.dart';
 import '../../widgets/segment_input_pad.dart';
+import '../../widgets/stat_tile.dart';
 import 'round_the_clock_game.dart';
 
 /// The live Round the Clock scoreboard + input pad. Pass-and-play: the
@@ -88,18 +92,7 @@ class _RoundTheClockPlayScreenState extends State<RoundTheClockPlayScreen> {
     if (_matchSaved) return;
     _matchSaved = true;
     // Fire-and-forget: recording history must never block play.
-    context.read<StorageService>().saveMatch(MatchRecord(
-          gameId: game.gameId,
-          gameName: 'round_the_clock',
-          players: game.players,
-          turnHistory: List.of(game.turnHistory),
-          winnerId: game.winner?.id,
-          config: {
-            'sequence': game.config.sequence.name,
-            'multiplierRule': game.config.multiplierRule.name,
-            'startingTarget': game.config.startingTarget,
-          },
-        ));
+    context.read<StorageService>().saveMatch(_buildMatchRecord(game));
   }
 
   void _rematch() {
@@ -236,6 +229,22 @@ class _RoundTheClockPlayScreenState extends State<RoundTheClockPlayScreen> {
   }
 }
 
+/// The same match-record shape saved to storage, built fresh (and not
+/// persisted) whenever the winner panel wants it for its stat tiles - one
+/// definition, used both places, so they can never drift apart.
+MatchRecord _buildMatchRecord(RoundTheClockGame game) => MatchRecord(
+      gameId: game.gameId,
+      gameName: 'round_the_clock',
+      players: game.players,
+      turnHistory: List.of(game.turnHistory),
+      winnerId: game.winner?.id,
+      config: {
+        'sequence': game.config.sequence.name,
+        'multiplierRule': game.config.multiplierRule.name,
+        'startingTarget': game.config.startingTarget,
+      },
+    );
+
 /// One line between scoreboard and pad: the match-win message takes
 /// priority, then a transient "advanced!" callout, otherwise darts left.
 class _StatusBar extends StatelessWidget {
@@ -282,6 +291,10 @@ class _WinnerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // This match isn't in storage yet at first build (the save happens in
+    // a listener callback), so the record used for stats is built fresh
+    // here rather than read back - see _buildMatchRecord's doc comment.
+    final record = _buildMatchRecord(game);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -292,6 +305,14 @@ class _WinnerPanel extends StatelessWidget {
           style: AppTypography.scoreLarge.copyWith(color: scheme.primary),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: SpacingTokens.lg),
+        MatchSummaryCard(sections: [
+          for (final player in game.players)
+            PlayerMatchSummary(
+              playerName: player.name,
+              tiles: _roundTheClockSummaryTiles(player, record),
+            ),
+        ]),
         const SizedBox(height: SpacingTokens.lg),
         AppButton(
             label: 'Rematch', icon: Icons.replay, onPressed: onRematch),
@@ -306,4 +327,24 @@ class _WinnerPanel extends StatelessWidget {
       ],
     );
   }
+}
+
+/// This match's headline Round the Clock numbers for one player - reuses
+/// the same calculator the Stats tab uses, just fed a single-match list.
+List<StatTile> _roundTheClockSummaryTiles(Player player, MatchRecord record) {
+  final stats = RoundTheClockStats.compute(player, [record]);
+  return [
+    StatTile(
+      label: 'Hit rate',
+      value: stats.overallHitRate == null
+          ? null
+          : '${stats.overallHitRate!.toStringAsFixed(0)}%',
+    ),
+    StatTile(
+      label: 'Favourite number',
+      value: stats.favouriteNumber == null
+          ? null
+          : (stats.favouriteNumber == 25 ? 'Bull' : '${stats.favouriteNumber}'),
+    ),
+  ];
 }

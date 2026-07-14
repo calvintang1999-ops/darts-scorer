@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/match_record.dart';
+import '../../models/player.dart';
 import '../../services/announcer_service.dart';
 import '../../services/dart_counter_service.dart';
+import '../../services/stats/x01_stats.dart';
 import '../../services/storage_service.dart';
-import '../../widgets/rotate_board_dialog.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/match_summary_card.dart';
 import '../../widgets/player_card.dart';
 import '../../widgets/quit_game_scope.dart';
+import '../../widgets/rotate_board_dialog.dart';
 import '../../widgets/segment_input_pad.dart';
+import '../../widgets/stat_tile.dart';
 import 'x01_game.dart';
 
 /// The live X01 scoreboard + input pad. Pass-and-play: the device is
@@ -84,17 +88,7 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
     if (_matchSaved) return;
     _matchSaved = true;
     // Fire-and-forget: recording history must never block play.
-    context.read<StorageService>().saveMatch(MatchRecord(
-          gameId: game.gameId,
-          gameName: 'x01',
-          players: game.players,
-          turnHistory: List.of(game.turnHistory),
-          winnerId: game.winner?.id,
-          config: {
-            'startingScore': game.config.startingScore,
-            'outRule': game.config.outRule.name,
-          },
-        ));
+    context.read<StorageService>().saveMatch(_buildMatchRecord(game));
   }
 
   void _rematch() {
@@ -235,6 +229,21 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
   }
 }
 
+/// The same match-record shape saved to storage, built fresh (and not
+/// persisted) whenever the winner panel wants it for its stat tiles - one
+/// definition, used both places, so they can never drift apart.
+MatchRecord _buildMatchRecord(X01Game game) => MatchRecord(
+      gameId: game.gameId,
+      gameName: 'x01',
+      players: game.players,
+      turnHistory: List.of(game.turnHistory),
+      winnerId: game.winner?.id,
+      config: {
+        'startingScore': game.config.startingScore,
+        'outRule': game.config.outRule.name,
+      },
+    );
+
 /// One line between scoreboard and pad: bust/leg messages take priority,
 /// otherwise the checkout suggestion, otherwise darts remaining.
 class _StatusBar extends StatelessWidget {
@@ -284,6 +293,10 @@ class _WinnerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // This match isn't in storage yet at first build (the save happens in
+    // a listener callback), so the record used for stats is built fresh
+    // here rather than read back - see _buildMatchRecord's doc comment.
+    final record = _buildMatchRecord(game);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -294,6 +307,14 @@ class _WinnerPanel extends StatelessWidget {
           style: AppTypography.scoreLarge.copyWith(color: scheme.primary),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: SpacingTokens.lg),
+        MatchSummaryCard(sections: [
+          for (final player in game.players)
+            PlayerMatchSummary(
+              playerName: player.name,
+              tiles: _x01SummaryTiles(player, record),
+            ),
+        ]),
         const SizedBox(height: SpacingTokens.lg),
         AppButton(
             label: 'Rematch', icon: Icons.replay, onPressed: onRematch),
@@ -308,4 +329,27 @@ class _WinnerPanel extends StatelessWidget {
       ],
     );
   }
+}
+
+/// This match's headline X01 numbers for one player - reuses the same
+/// calculator the Stats tab uses, just fed a single-match list.
+List<StatTile> _x01SummaryTiles(Player player, MatchRecord record) {
+  final stats = X01Stats.compute(player, [record]);
+  return [
+    StatTile(
+      label: '3-dart avg',
+      value: stats.threeDartAverage?.toStringAsFixed(1),
+    ),
+    StatTile(
+      label: 'Checkout %',
+      value: stats.checkoutPercentage == null
+          ? null
+          : '${stats.checkoutPercentage!.toStringAsFixed(0)}%',
+    ),
+    StatTile(
+      label: 'Highest checkout',
+      value: stats.highestCheckout?.toString(),
+    ),
+    StatTile(label: '180s', value: '${stats.oneEightyVisits}'),
+  ];
 }

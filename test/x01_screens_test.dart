@@ -1,7 +1,16 @@
+import 'package:darts/games/x01/x01_config.dart';
+import 'package:darts/games/x01/x01_game.dart';
+import 'package:darts/games/x01/x01_play_screen.dart';
 import 'package:darts/main.dart';
+import 'package:darts/models/player.dart';
+import 'package:darts/services/announcer_service.dart';
+import 'package:darts/services/dart_counter_service.dart';
+import 'package:darts/services/settings_provider.dart';
 import 'package:darts/services/storage_service.dart';
+import 'package:darts/widgets/match_summary_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   Future<void> startGame(WidgetTester tester) async {
@@ -87,6 +96,62 @@ void main() {
     // easily exceed 600px of usable height, so this is the real stress
     // case (it caught a pre-existing overflow: the pad's fixed-size tap
     // targets didn't fit under a bare Spacer).
+    await tester.binding.setSurfaceSize(const Size(400, 600));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('winner panel shows a per-player match summary without overflow',
+      (tester) async {
+    // Bypassing Home/config screens: a starting score of 2 with single-out
+    // means the very first dart wins, which is the fastest way to reach
+    // the winner panel. The provider set mirrors DartsApp's, since
+    // X01PlayScreen reads AnnouncerService/DartCounterService in initState.
+    await tester.pumpWidget(MaterialApp(
+      home: MultiProvider(
+        providers: [
+          Provider<StorageService>.value(value: InMemoryStorageService()),
+          ChangeNotifierProvider(create: (_) => SettingsProvider()),
+          Provider<AnnouncerService>(
+            create: (ctx) => AnnouncerService(ctx.read<SettingsProvider>()),
+            dispose: (_, service) => service.dispose(),
+          ),
+          ChangeNotifierProvider(create: (_) => DartCounterService()),
+        ],
+        child: X01PlayScreen(
+          game: X01Game(
+            players: [Player.create('Alice'), Player.create('Bob')],
+            config:
+                const X01Config(startingScore: 2, outRule: X01OutRule.single),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '2'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alice wins!'), findsOneWidget);
+    // One stat-tile block per player - the scoreboard above also shows
+    // each name once, so this checks the summary specifically rather
+    // than counting name occurrences.
+    expect(
+      find.descendant(
+          of: find.byType(MatchSummaryCard), matching: find.text('ALICE')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+          of: find.byType(MatchSummaryCard), matching: find.text('BOB')),
+      findsOneWidget,
+    );
+    expect(find.text('3-DART AVG'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+
+    // A short phone screen is the real stress case for the extra content
+    // the summary card adds below the winner text.
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(400, 600));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
