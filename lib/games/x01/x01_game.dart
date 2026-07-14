@@ -128,8 +128,10 @@ class X01Game extends DartsGame {
         .add(dartThrow.copyWith(resultingScoreDelta: newScore - scoreBefore));
 
     final player = players[playerIndex];
+    final visitTotal = startOfTurnScore - newScore;
     if (legWon) {
-      emitEvent(GameEventKind.checkout, player, '${player.name}, checkout!');
+      emitEvent(
+          GameEventKind.checkout, player, '${player.name}, $visitTotal, checkout!');
       _finishTurn();
       _handleLegWin(playerIndex);
     } else if (bust || currentTurnThrows.length >= 3) {
@@ -138,12 +140,27 @@ class X01Game extends DartsGame {
         player,
         bust
             ? '${player.name}, no score'
-            : '${player.name}, you require $newScore',
+            : _visitAnnouncement(player, visitTotal, newScore, playerIndex),
       );
       _finishTurn();
       _advanceToNextPlayer();
     }
     notifyListeners();
+  }
+
+  /// What the announcer says for an ordinary (non-bust, non-checkout)
+  /// visit: the points just scored, e.g. "180" - then "you require X" only
+  /// when X can actually be finished with a fresh 3 darts under this leg's
+  /// out-rule. Naming a score nobody could check out (a "bogey" number, or
+  /// simply too high) would be a caller stating the obvious for no reason.
+  String _visitAnnouncement(
+      Player player, int visitTotal, int newScore, int playerIndex) {
+    final checkout = config.outRule == X01OutRule.double && opened[playerIndex]
+        ? suggestCheckout(newScore, 3)
+        : null;
+    return checkout == null
+        ? '${player.name}, $visitTotal'
+        : '${player.name}, $visitTotal. You require $newScore';
   }
 
   @override

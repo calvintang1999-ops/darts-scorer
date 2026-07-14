@@ -1,5 +1,6 @@
 import 'package:darts/games/x01/x01_config.dart';
 import 'package:darts/games/x01/x01_game.dart';
+import 'package:darts/models/game_event.dart';
 import 'package:darts/models/player.dart';
 import 'package:darts/models/throw.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,6 +70,68 @@ void main() {
       throwDart(game, p0, 1, 1);
       expect(game.turnHistory.single.legNumber, 1);
       expect(game.turnHistory.single.setNumber, 1);
+    });
+  });
+
+  group('Announcer messages', () {
+    // Every visit fires exactly one GameEvent - collect them as they
+    // happen so each test can inspect the last one without needing a
+    // stream matcher.
+    List<GameEvent> listen(X01Game game) {
+      final events = <GameEvent>[];
+      game.events.listen(events.add);
+      return events;
+    }
+
+    test(
+        'a maximum visit announces the points scored, not the remaining score',
+        () async {
+      final game = X01Game(players: [p0, p1], config: const X01Config());
+      final events = listen(game);
+
+      throwDart(game, p0, 20, 3);
+      throwDart(game, p0, 20, 3);
+      throwDart(game, p0, 20, 3); // 180 scored, 321 left - not finishable
+      // Events go out over a Stream, which delivers on a microtask, not
+      // synchronously - let the pending delivery run before asserting.
+      await Future<void>.value();
+
+      expect(events, hasLength(1));
+      expect(events.single.kind, GameEventKind.visit);
+      expect(events.single.message, contains('180'));
+      expect(events.single.message, isNot(contains('require')));
+    });
+
+    test('a visit leaving a finishable score adds a "you require" call',
+        () async {
+      final game = X01Game(
+        players: [p0, p1],
+        config: const X01Config(startingScore: 100),
+      );
+      final events = listen(game);
+
+      throwDart(game, p0, 20, 1); // scores 20, leaves 80 - "T20 D10"
+      throwDart(game, p0, 0, 1); // miss
+      throwDart(game, p0, 0, 1); // miss
+      await Future<void>.value();
+
+      expect(events.single.message, contains('You require 80'));
+    });
+
+    test('a visit leaving a non-finishable score has no "you require" call',
+        () async {
+      final game = X01Game(
+        players: [p0, p1],
+        config: const X01Config(startingScore: 200),
+      );
+      final events = listen(game);
+
+      throwDart(game, p0, 20, 1); // scores 20
+      throwDart(game, p0, 11, 1); // scores 11, leaves 169 - no 3-dart route
+      throwDart(game, p0, 0, 1); // miss
+      await Future<void>.value();
+
+      expect(events.single.message, isNot(contains('require')));
     });
   });
 }
