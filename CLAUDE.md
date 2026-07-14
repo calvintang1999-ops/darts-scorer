@@ -55,8 +55,8 @@ them - don't simplify it away.
   version if the coordinate convention ever changes so old data can't be
   silently misread. All board geometry constants live in that file only.
 - **Storage behind an interface**: code depends on `StorageService`
-  (`lib/services/storage_service.dart`), currently `InMemoryStorageService`.
-  Real persistence later = one new class + one line in `main.dart`.
+  (`lib/services/storage_service.dart`), implemented by `DriftStorageService`
+  (SQLite via drift) for the real app and `InMemoryStorageService` for tests.
 - **Tokens-only styling**: every colour, size, radius, and duration comes
   from `lib/theme/tokens.dart` / `typography.dart`, consumed via
   `lib/theme/theme.dart` and the shared widgets in `lib/widgets/`.
