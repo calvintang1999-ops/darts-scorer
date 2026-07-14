@@ -18,11 +18,51 @@ class AnnouncerService {
     // Best-effort: some environments (widget tests, a device with no TTS
     // engine installed) have no platform implementation to talk to.
     _tts.setSpeechRate(0.5).catchError((_) {});
+    _pickMaleVoice();
   }
 
   final SettingsProvider _settings;
   final FlutterTts _tts = FlutterTts();
   StreamSubscription<GameEvent>? _subscription;
+
+  /// Tries to sound like a male darts caller. Every platform's TTS engine
+  /// ships a different set of voices with different naming, and only some
+  /// of them label gender at all, so this is a best-effort search rather
+  /// than a guarantee: look for a voice that says it's male, and fall back
+  /// to a lower pitch (which reads as deeper/more masculine on most
+  /// engines) if none is found or the device can't tell us its voices.
+  Future<void> _pickMaleVoice() async {
+    try {
+      final voices = await _tts.getVoices;
+      if (voices is List) {
+        for (final voice in voices) {
+          if (voice is! Map) continue;
+          final name = voice['name']?.toString().toLowerCase() ?? '';
+          final locale = voice['locale']?.toString().toLowerCase() ?? '';
+          // Only iOS/macOS voices report a "gender" key; on Android we
+          // have to guess from the voice's name instead.
+          final gender = voice['gender']?.toString().toLowerCase() ?? '';
+          final looksMale = gender == 'male' ||
+              (name.contains('male') && !name.contains('female'));
+          if (looksMale && locale.startsWith('en')) {
+            await _tts.setVoice({
+              'name': voice['name'].toString(),
+              'locale': voice['locale'].toString(),
+            });
+            return;
+          }
+        }
+      }
+    } catch (_) {
+      // getVoices/setVoice isn't supported on this platform - fall through
+      // to the pitch-only fallback below.
+    }
+    try {
+      await _tts.setPitch(0.85);
+    } catch (_) {
+      // No TTS engine available at all - nothing more to try.
+    }
+  }
 
   /// Starts announcing events from [game]. Safe to call again (e.g. for a
   /// rematch's new game instance) - it drops the previous subscription
