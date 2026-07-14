@@ -17,4 +17,10 @@ class Player {
   final String id;
   final String name;
   final DateTime createdAt;
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'name': name,
+        'createdAt': createdAt.toIso8601String(),
+      };
 }

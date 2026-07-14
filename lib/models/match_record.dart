@@ -35,4 +35,14 @@ class MatchRecord {
   /// saved before this existed; stats calculators fall back to that
   /// game's own config defaults in that case.
   final Map<String, Object?>? config;
+
+  Map<String, Object?> toJson() => {
+        'gameId': gameId,
+        'gameName': gameName,
+        'players': [for (final p in players) p.toJson()],
+        'turnHistory': [for (final t in turnHistory) t.toJson()],
+        'winnerId': winnerId,
+        'finishedAt': finishedAt.toIso8601String(),
+        'config': config,
+      };
 }

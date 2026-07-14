@@ -84,6 +84,19 @@ class Throw {
         landingPosition: landingPosition,
         intendedTarget: intendedTarget ?? this.intendedTarget,
       );
+
+  Map<String, Object?> toJson() => {
+        'timestamp': timestamp.toIso8601String(),
+        'playerId': player.id,
+        'playerName': player.name,
+        'actualSegment': actualSegment,
+        'multiplier': multiplier,
+        'resultingScoreDelta': resultingScoreDelta,
+        'gameId': gameId,
+        'source': source.name,
+        'landingPosition': landingPosition?.toJson(),
+        'intendedTarget': intendedTarget,
+      };
 }
 
 /// One player's visit to the oche: up to 3 throws.
@@ -103,4 +116,12 @@ class Turn {
   /// passes these and both stay at their default of 1.
   final int legNumber;
   final int setNumber;
+
+  Map<String, Object?> toJson() => {
+        'playerId': player.id,
+        'playerName': player.name,
+        'legNumber': legNumber,
+        'setNumber': setNumber,
+        'throws': [for (final t in throws) t.toJson()],
+      };
 }

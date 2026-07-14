@@ -104,6 +104,12 @@ class DartPosition {
   /// The coordinate-system version this position was recorded under.
   final int boardCoordinateSystemVersion;
 
+  Map<String, Object?> toJson() => {
+        'radiusNormalised': radiusNormalised,
+        'angleDegrees': angleDegrees,
+        'boardCoordinateSystemVersion': boardCoordinateSystemVersion,
+      };
+
   /// Works out which segment and ring this position lands in.
   SegmentHit toSegment() {
     if (radiusNormalised <= BoardGeometry.innerBullRadius) {
