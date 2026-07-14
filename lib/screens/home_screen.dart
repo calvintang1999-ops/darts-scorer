@@ -6,6 +6,7 @@ import '../theme/tokens.dart';
 import '../widgets/game_card.dart';
 import 'player_select_screen.dart';
 import 'settings_screen.dart';
+import 'stats_screen.dart';
 
 /// The landing screen: the list of games, rendered straight from the
 /// registry. It has no knowledge of any specific game.
@@ -30,6 +31,13 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Darts'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Stats',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const StatsScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.people),
             tooltip: 'Players',

@@ -51,4 +51,10 @@ abstract final class SizeTokens {
 
   /// Width of one player panel on the play screen's scrolling strip.
   static const double playerCardWidth = 180;
+
+  /// Height of a chart's plotting area on the stats screens.
+  static const double chartHeight = 160;
+
+  /// Width of one StatTile in the stats screens' wrapping grid.
+  static const double statTileWidth = 150;
 }

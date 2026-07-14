@@ -2,7 +2,7 @@ import '../../games/x01/checkouts.dart';
 import '../../games/x01/x01_config.dart';
 import '../../models/match_record.dart';
 import '../../models/player.dart';
-import '../../models/throw.dart';
+import 'stats_filter.dart';
 
 /// Everything computed for one player's X01 history. Every ratio/best-of
 /// field is nullable, not NaN: null means "no qualifying data yet", and the
@@ -113,7 +113,7 @@ class X01Stats {
 
       // First-nine average: the player's first up-to-9 darts of each leg,
       // whether or not that leg was won or the match finished.
-      for (final leg in _legsOf(match)) {
+      for (final leg in legsOf(match)) {
         var dartsSoFar = 0;
         var pointsSoFar = 0;
         for (final turn in leg.where((t) => t.player.id == player.id)) {
@@ -135,7 +135,7 @@ class X01Stats {
       // winner to make sense - abandoned matches are skipped entirely for
       // these, per our "exclude" decision.
       if (match.winnerId == null) continue;
-      for (final leg in _legsOf(match)) {
+      for (final leg in legsOf(match)) {
         final legWinnerId = leg.last.player.id;
         final playerTurnsInLeg =
             leg.where((t) => t.player.id == player.id).toList();
@@ -229,22 +229,5 @@ class X01Stats {
       startingScore: config['startingScore'] as int? ?? 501,
       outRule: X01OutRule.values.byName(config['outRule'] as String? ?? 'double'),
     );
-  }
-
-  /// Splits a match's turn history into legs (grouped by legNumber/
-  /// setNumber, in play order) - every other game is single-leg, so this
-  /// naturally returns one group for them too.
-  static List<List<Turn>> _legsOf(MatchRecord match) {
-    final legs = <List<Turn>>[];
-    (int, int)? currentKey;
-    for (final turn in match.turnHistory) {
-      final key = (turn.legNumber, turn.setNumber);
-      if (key != currentKey) {
-        legs.add([]);
-        currentKey = key;
-      }
-      legs.last.add(turn);
-    }
-    return legs;
   }
 }

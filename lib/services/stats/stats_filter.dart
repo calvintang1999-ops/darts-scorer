@@ -1,5 +1,6 @@
 import '../../models/match_record.dart';
 import '../../models/player.dart';
+import '../../models/throw.dart';
 
 /// An inclusive date range, kept as our own tiny class (instead of
 /// Flutter's `DateTimeRange`) so this whole stats layer stays plain Dart -
@@ -32,4 +33,22 @@ List<MatchRecord> matchesForPlayer(
   }).toList()
     ..sort((a, b) => b.finishedAt.compareTo(a.finishedAt));
   return matches;
+}
+
+/// Splits a match's turn history into legs (grouped by legNumber/
+/// setNumber, in play order) - every non-X01 game is single-leg, so this
+/// naturally returns one group for them too. Used by X01's stats
+/// calculator and by the match detail screen.
+List<List<Turn>> legsOf(MatchRecord match) {
+  final legs = <List<Turn>>[];
+  (int, int)? currentKey;
+  for (final turn in match.turnHistory) {
+    final key = (turn.legNumber, turn.setNumber);
+    if (key != currentKey) {
+      legs.add([]);
+      currentKey = key;
+    }
+    legs.last.add(turn);
+  }
+  return legs;
 }
