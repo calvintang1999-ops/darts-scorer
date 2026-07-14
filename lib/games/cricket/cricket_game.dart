@@ -77,7 +77,7 @@ class CricketGame extends DartsGame {
   int get closedThisTurn => _numbersClosedThisTurn.length;
 
   @override
-  void applyThrow(Throw dartThrow) {
+  void scoreThrow(Throw dartThrow) {
     if (isFinished) return;
     _snapshots.add(_takeSnapshot());
     statusMessage = null;

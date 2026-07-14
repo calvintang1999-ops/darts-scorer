@@ -53,16 +53,36 @@ abstract class DartsGame extends ChangeNotifier {
     _eventsController.add(GameEvent(kind: kind, player: player, message: message));
   }
 
+  /// Fires exactly once for every dart thrown, in every game, regardless
+  /// of what it scored or which game is being played. This is the hook for
+  /// features that care about raw dart count but nothing about any one
+  /// game's rules - currently just the lifetime dart counter that reminds
+  /// you to rotate the board every so many darts.
+  Stream<void> get dartThrown => _dartThrownController.stream;
+  final _dartThrownController = StreamController<void>.broadcast();
+
   @override
   void dispose() {
     _eventsController.close();
+    _dartThrownController.close();
     super.dispose();
   }
 
-  /// Apply one dart to the game. Implementations should fill in the
+  /// Every play screen calls this once per dart. It fires [dartThrown] and
+  /// then hands off to [scoreThrow], which is where each game's actual
+  /// rules live - that split is what lets a cross-game feature (the dart
+  /// counter) hook in centrally instead of every game remembering to
+  /// report it.
+  void applyThrow(Throw dartThrow) {
+    _dartThrownController.add(null);
+    scoreThrow(dartThrow);
+  }
+
+  /// Game-specific scoring rules. Implementations should fill in the
   /// throw's `resultingScoreDelta`, update scores, handle turn changes,
   /// and call [notifyListeners].
-  void applyThrow(Throw dartThrow);
+  @protected
+  void scoreThrow(Throw dartThrow);
 
   /// Undo the most recent dart, even across turn boundaries.
   void undo();

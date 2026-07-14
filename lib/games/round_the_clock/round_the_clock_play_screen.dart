@@ -3,12 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../models/match_record.dart';
 import '../../services/announcer_service.dart';
+import '../../services/dart_counter_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/player_card.dart';
 import '../../widgets/quit_game_scope.dart';
+import '../../widgets/rotate_board_dialog.dart';
 import '../../widgets/segment_input_pad.dart';
 import 'round_the_clock_game.dart';
 
@@ -33,18 +35,22 @@ class _RoundTheClockPlayScreenState extends State<RoundTheClockPlayScreen> {
   // Read once in initState and cached: context.read in dispose() isn't
   // safe, since by then the widget may already be detached from the tree.
   late final AnnouncerService _announcer;
+  late final DartCounterService _dartCounter;
 
   @override
   void initState() {
     super.initState();
     widget.game.addListener(_onGameChanged);
     _announcer = context.read<AnnouncerService>()..listenTo(widget.game);
+    _dartCounter = context.read<DartCounterService>()
+      ..listenTo(widget.game, onRotateReminderDue: _showRotateReminder);
   }
 
   @override
   void dispose() {
     widget.game.removeListener(_onGameChanged);
     _announcer.stopListening();
+    _dartCounter.stopListening();
     _playersScrollController.dispose();
     super.dispose();
   }
@@ -52,6 +58,11 @@ class _RoundTheClockPlayScreenState extends State<RoundTheClockPlayScreen> {
   void _onGameChanged() {
     _scrollToCurrentPlayer();
     _saveIfFinished();
+  }
+
+  void _showRotateReminder() {
+    if (!mounted) return;
+    showRotateBoardDialog(context);
   }
 
   /// Keeps the active player's card in view when there are more players

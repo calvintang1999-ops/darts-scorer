@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../services/dart_counter_service.dart';
 import '../services/settings_provider.dart';
 import '../services/storage_service.dart';
 import '../theme/tokens.dart';
@@ -46,6 +47,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final dartCounter = context.watch<DartCounterService>();
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -79,6 +81,15 @@ class SettingsScreen extends StatelessWidget {
                 style: AppTypography.label),
             value: settings.soundEnabled,
             onChanged: settings.setSoundEnabled,
+          ),
+          const SizedBox(height: SpacingTokens.lg),
+          Text('DARTBOARD', style: AppTypography.label),
+          const SizedBox(height: SpacingTokens.sm),
+          Text(
+            'Lifetime darts thrown: ${dartCounter.totalThrown} - a reminder '
+            'to rotate the board pops up every '
+            '${DartCounterService.reminderInterval}.',
+            style: AppTypography.body,
           ),
           const SizedBox(height: SpacingTokens.lg),
           Text('BACKUP', style: AppTypography.label),

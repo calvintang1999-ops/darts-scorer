@@ -68,7 +68,7 @@ class HalfItGame extends DartsGame {
   int get dartsLeftInTurn => 3 - currentTurnThrows.length;
 
   @override
-  void applyThrow(Throw dartThrow) {
+  void scoreThrow(Throw dartThrow) {
     if (isFinished) return;
     _snapshots.add(_takeSnapshot());
     statusMessage = null;

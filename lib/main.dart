@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'screens/home_screen.dart';
 import 'services/announcer_service.dart';
+import 'services/dart_counter_service.dart';
 import 'services/drift_storage_service.dart';
 import 'services/players_provider.dart';
 import 'services/settings_provider.dart';
@@ -37,6 +38,7 @@ class DartsApp extends StatelessWidget {
           create: (ctx) => AnnouncerService(ctx.read<SettingsProvider>()),
           dispose: (_, service) => service.dispose(),
         ),
+        ChangeNotifierProvider(create: (_) => DartCounterService()),
       ],
       // The MaterialApp watches SettingsProvider so switching theme mode
       // in Settings restyles the app immediately.
