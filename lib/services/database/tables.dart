@@ -52,6 +52,14 @@ class MatchPlayers extends Table {
   TextColumn get playerName => text()(); // snapshot, see Matches doc comment
   IntColumn get orderIndex => integer()();
 
+  /// Set when this participant was a bot rather than a human, pointing at
+  /// the BotProfile it was played with - added in schema version 4. Null
+  /// for every human participant. playerId/playerName still hold the bot's
+  /// id/name the same as a human's, so existing lookups keep working
+  /// unchanged; this column only adds the ability to tell bots apart from
+  /// humans and find which profile a bot match was played against.
+  TextColumn get botProfileId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {matchId, orderIndex};
 }
@@ -99,4 +107,22 @@ class Throws extends Table {
   /// everywhere except Round the Clock, which fills it in with the
   /// player's target at the moment they threw.
   IntColumn get intendedTarget => integer().nullable()();
+}
+
+/// A saved bot character (see lib/models/bot_profile.dart), added in schema
+/// version 4. The 8 presets are seeded once, on first run of this version -
+/// see AppDatabase._seedBotProfiles - and are never deleted; custom
+/// profiles (future career mode) are ordinary rows with isPreset = false.
+@DataClassName('BotProfileRow')
+class BotProfiles extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  RealColumn get sigmaMm => real()();
+  RealColumn get targetAverage => real()();
+  RealColumn get measuredCheckoutPercent => real()();
+  BoolColumn get isPreset => boolean()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

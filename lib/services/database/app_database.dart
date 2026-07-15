@@ -7,6 +7,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../models/player.dart';
+import '../../models/unique_id.dart';
+import '../bot/bot_calibration_constants.dart';
 import 'tables.dart';
 
 part 'app_database.g.dart';
@@ -15,7 +17,8 @@ part 'app_database.g.dart';
 /// just constructing this class - e.g. at app startup - never blocks on
 /// disk or platform-channel work; the file is only touched the first time
 /// a query actually runs.
-@DriftDatabase(tables: [Players, Matches, MatchPlayers, Turns, Throws])
+@DriftDatabase(
+    tables: [Players, Matches, MatchPlayers, Turns, Throws, BotProfiles])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -28,9 +31,10 @@ class AppDatabase extends _$AppDatabase {
   /// shape. See the class doc on [migration] for how that works.
   ///
   /// Version 2 added Throws.intendedTarget. Version 3 added
-  /// Matches.configJson.
+  /// Matches.configJson. Version 4 added the BotProfiles table and
+  /// MatchPlayers.botProfileId (Phase 3, the bot opponent).
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Drift calls exactly one of these the first time the app runs against
   /// a given database file:
@@ -46,6 +50,7 @@ class AppDatabase extends _$AppDatabase {
         onCreate: (m) async {
           await m.createAll();
           await _seedDefaultPlayer();
+          await _seedBotProfiles();
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
@@ -53,6 +58,11 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 3) {
             await m.addColumn(matches, matches.configJson);
+          }
+          if (from < 4) {
+            await m.createTable(botProfiles);
+            await m.addColumn(matchPlayers, matchPlayers.botProfileId);
+            await _seedBotProfiles();
           }
         },
       );
@@ -67,6 +77,25 @@ class AppDatabase extends _$AppDatabase {
       name: calvin.name,
       createdAt: calvin.createdAt,
     ));
+  }
+
+  /// Seeds the 8 preset bots ("Bot 35" .. "World Class (105)") - runs once,
+  /// either when the database is first created or when an existing
+  /// database upgrades into version 4. Presets are never deleted, so this
+  /// never needs to run again after that.
+  Future<void> _seedBotProfiles() async {
+    final now = DateTime.now();
+    for (final preset in botCalibrationPresets) {
+      await into(botProfiles).insert(BotProfilesCompanion.insert(
+        id: generateLocalId(),
+        name: preset.name,
+        sigmaMm: preset.sigmaMm,
+        targetAverage: preset.targetAverage,
+        measuredCheckoutPercent: preset.measuredCheckoutPercent,
+        isPreset: true,
+        createdAt: now,
+      ));
+    }
   }
 }
 

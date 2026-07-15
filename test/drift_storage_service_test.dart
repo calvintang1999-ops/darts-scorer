@@ -168,4 +168,53 @@ void main() {
     expect(loaded.players.single.name, 'Alice');
     expect(loaded.turnHistory.single.player.name, 'Alice');
   });
+
+  group('bot profiles', () {
+    test('seeds the 8 presets on first use, all marked isPreset', () async {
+      final profiles = await storage.loadBotProfiles();
+      expect(profiles, hasLength(8));
+      expect(profiles.every((p) => p.isPreset), true);
+      expect(profiles.map((p) => p.name), contains('Bot 35'));
+      expect(profiles.map((p) => p.name), contains('World Class (105)'));
+    });
+
+    test('a bot match participant round-trips with its botProfileId',
+        () async {
+      final profile = (await storage.loadBotProfiles()).first;
+      final human = Player.create('Alice');
+      final bot = Player(
+        id: 'bot-instance-1',
+        name: profile.name,
+        botProfileId: profile.id,
+      );
+
+      final match = MatchRecord(
+        gameId: 'match-bot-1',
+        gameName: 'x01',
+        players: [human, bot],
+        turnHistory: [
+          Turn(player: bot, throws: [
+            Throw(
+              player: bot,
+              actualSegment: 20,
+              multiplier: 3,
+              gameId: 'match-bot-1',
+              source: ThrowSource.bot,
+              intendedTarget: 20,
+            ),
+          ]),
+        ],
+        winnerId: bot.id,
+      );
+      await storage.saveMatch(match);
+
+      final loaded = (await storage.loadMatchHistory())
+          .singleWhere((m) => m.gameId == 'match-bot-1');
+      final loadedBot = loaded.players.singleWhere((p) => p.id == bot.id);
+      final loadedHuman = loaded.players.singleWhere((p) => p.id == human.id);
+
+      expect(loadedBot.botProfileId, profile.id);
+      expect(loadedHuman.botProfileId, isNull);
+    });
+  });
 }

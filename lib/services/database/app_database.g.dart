@@ -738,12 +738,24 @@ class $MatchPlayersTable extends MatchPlayers
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _botProfileIdMeta = const VerificationMeta(
+    'botProfileId',
+  );
+  @override
+  late final GeneratedColumn<String> botProfileId = GeneratedColumn<String>(
+    'bot_profile_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     matchId,
     playerId,
     playerName,
     orderIndex,
+    botProfileId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -789,6 +801,15 @@ class $MatchPlayersTable extends MatchPlayers
     } else if (isInserting) {
       context.missing(_orderIndexMeta);
     }
+    if (data.containsKey('bot_profile_id')) {
+      context.handle(
+        _botProfileIdMeta,
+        botProfileId.isAcceptableOrUnknown(
+          data['bot_profile_id']!,
+          _botProfileIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -814,6 +835,10 @@ class $MatchPlayersTable extends MatchPlayers
         DriftSqlType.int,
         data['${effectivePrefix}order_index'],
       )!,
+      botProfileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bot_profile_id'],
+      ),
     );
   }
 
@@ -828,11 +853,20 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
   final String playerId;
   final String playerName;
   final int orderIndex;
+
+  /// Set when this participant was a bot rather than a human, pointing at
+  /// the BotProfile it was played with - added in schema version 4. Null
+  /// for every human participant. playerId/playerName still hold the bot's
+  /// id/name the same as a human's, so existing lookups keep working
+  /// unchanged; this column only adds the ability to tell bots apart from
+  /// humans and find which profile a bot match was played against.
+  final String? botProfileId;
   const MatchPlayerRow({
     required this.matchId,
     required this.playerId,
     required this.playerName,
     required this.orderIndex,
+    this.botProfileId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -841,6 +875,9 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
     map['player_id'] = Variable<String>(playerId);
     map['player_name'] = Variable<String>(playerName);
     map['order_index'] = Variable<int>(orderIndex);
+    if (!nullToAbsent || botProfileId != null) {
+      map['bot_profile_id'] = Variable<String>(botProfileId);
+    }
     return map;
   }
 
@@ -850,6 +887,9 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
       playerId: Value(playerId),
       playerName: Value(playerName),
       orderIndex: Value(orderIndex),
+      botProfileId: botProfileId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(botProfileId),
     );
   }
 
@@ -863,6 +903,7 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
       playerId: serializer.fromJson<String>(json['playerId']),
       playerName: serializer.fromJson<String>(json['playerName']),
       orderIndex: serializer.fromJson<int>(json['orderIndex']),
+      botProfileId: serializer.fromJson<String?>(json['botProfileId']),
     );
   }
   @override
@@ -873,6 +914,7 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
       'playerId': serializer.toJson<String>(playerId),
       'playerName': serializer.toJson<String>(playerName),
       'orderIndex': serializer.toJson<int>(orderIndex),
+      'botProfileId': serializer.toJson<String?>(botProfileId),
     };
   }
 
@@ -881,11 +923,13 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
     String? playerId,
     String? playerName,
     int? orderIndex,
+    Value<String?> botProfileId = const Value.absent(),
   }) => MatchPlayerRow(
     matchId: matchId ?? this.matchId,
     playerId: playerId ?? this.playerId,
     playerName: playerName ?? this.playerName,
     orderIndex: orderIndex ?? this.orderIndex,
+    botProfileId: botProfileId.present ? botProfileId.value : this.botProfileId,
   );
   MatchPlayerRow copyWithCompanion(MatchPlayersCompanion data) {
     return MatchPlayerRow(
@@ -897,6 +941,9 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
       orderIndex: data.orderIndex.present
           ? data.orderIndex.value
           : this.orderIndex,
+      botProfileId: data.botProfileId.present
+          ? data.botProfileId.value
+          : this.botProfileId,
     );
   }
 
@@ -906,13 +953,15 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
           ..write('matchId: $matchId, ')
           ..write('playerId: $playerId, ')
           ..write('playerName: $playerName, ')
-          ..write('orderIndex: $orderIndex')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('botProfileId: $botProfileId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(matchId, playerId, playerName, orderIndex);
+  int get hashCode =>
+      Object.hash(matchId, playerId, playerName, orderIndex, botProfileId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -920,7 +969,8 @@ class MatchPlayerRow extends DataClass implements Insertable<MatchPlayerRow> {
           other.matchId == this.matchId &&
           other.playerId == this.playerId &&
           other.playerName == this.playerName &&
-          other.orderIndex == this.orderIndex);
+          other.orderIndex == this.orderIndex &&
+          other.botProfileId == this.botProfileId);
 }
 
 class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
@@ -928,12 +978,14 @@ class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
   final Value<String> playerId;
   final Value<String> playerName;
   final Value<int> orderIndex;
+  final Value<String?> botProfileId;
   final Value<int> rowid;
   const MatchPlayersCompanion({
     this.matchId = const Value.absent(),
     this.playerId = const Value.absent(),
     this.playerName = const Value.absent(),
     this.orderIndex = const Value.absent(),
+    this.botProfileId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MatchPlayersCompanion.insert({
@@ -941,6 +993,7 @@ class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
     required String playerId,
     required String playerName,
     required int orderIndex,
+    this.botProfileId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : matchId = Value(matchId),
        playerId = Value(playerId),
@@ -951,6 +1004,7 @@ class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
     Expression<String>? playerId,
     Expression<String>? playerName,
     Expression<int>? orderIndex,
+    Expression<String>? botProfileId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -958,6 +1012,7 @@ class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
       if (playerId != null) 'player_id': playerId,
       if (playerName != null) 'player_name': playerName,
       if (orderIndex != null) 'order_index': orderIndex,
+      if (botProfileId != null) 'bot_profile_id': botProfileId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -967,6 +1022,7 @@ class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
     Value<String>? playerId,
     Value<String>? playerName,
     Value<int>? orderIndex,
+    Value<String?>? botProfileId,
     Value<int>? rowid,
   }) {
     return MatchPlayersCompanion(
@@ -974,6 +1030,7 @@ class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
       playerId: playerId ?? this.playerId,
       playerName: playerName ?? this.playerName,
       orderIndex: orderIndex ?? this.orderIndex,
+      botProfileId: botProfileId ?? this.botProfileId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -993,6 +1050,9 @@ class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
     if (orderIndex.present) {
       map['order_index'] = Variable<int>(orderIndex.value);
     }
+    if (botProfileId.present) {
+      map['bot_profile_id'] = Variable<String>(botProfileId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1006,6 +1066,7 @@ class MatchPlayersCompanion extends UpdateCompanion<MatchPlayerRow> {
           ..write('playerId: $playerId, ')
           ..write('playerName: $playerName, ')
           ..write('orderIndex: $orderIndex, ')
+          ..write('botProfileId: $botProfileId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2219,6 +2280,492 @@ class ThrowsCompanion extends UpdateCompanion<ThrowRow> {
   }
 }
 
+class $BotProfilesTable extends BotProfiles
+    with TableInfo<$BotProfilesTable, BotProfileRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BotProfilesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sigmaMmMeta = const VerificationMeta(
+    'sigmaMm',
+  );
+  @override
+  late final GeneratedColumn<double> sigmaMm = GeneratedColumn<double>(
+    'sigma_mm',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetAverageMeta = const VerificationMeta(
+    'targetAverage',
+  );
+  @override
+  late final GeneratedColumn<double> targetAverage = GeneratedColumn<double>(
+    'target_average',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _measuredCheckoutPercentMeta =
+      const VerificationMeta('measuredCheckoutPercent');
+  @override
+  late final GeneratedColumn<double> measuredCheckoutPercent =
+      GeneratedColumn<double>(
+        'measured_checkout_percent',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _isPresetMeta = const VerificationMeta(
+    'isPreset',
+  );
+  @override
+  late final GeneratedColumn<bool> isPreset = GeneratedColumn<bool>(
+    'is_preset',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_preset" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    sigmaMm,
+    targetAverage,
+    measuredCheckoutPercent,
+    isPreset,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'bot_profiles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BotProfileRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('sigma_mm')) {
+      context.handle(
+        _sigmaMmMeta,
+        sigmaMm.isAcceptableOrUnknown(data['sigma_mm']!, _sigmaMmMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sigmaMmMeta);
+    }
+    if (data.containsKey('target_average')) {
+      context.handle(
+        _targetAverageMeta,
+        targetAverage.isAcceptableOrUnknown(
+          data['target_average']!,
+          _targetAverageMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetAverageMeta);
+    }
+    if (data.containsKey('measured_checkout_percent')) {
+      context.handle(
+        _measuredCheckoutPercentMeta,
+        measuredCheckoutPercent.isAcceptableOrUnknown(
+          data['measured_checkout_percent']!,
+          _measuredCheckoutPercentMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_measuredCheckoutPercentMeta);
+    }
+    if (data.containsKey('is_preset')) {
+      context.handle(
+        _isPresetMeta,
+        isPreset.isAcceptableOrUnknown(data['is_preset']!, _isPresetMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_isPresetMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BotProfileRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BotProfileRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      sigmaMm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}sigma_mm'],
+      )!,
+      targetAverage: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}target_average'],
+      )!,
+      measuredCheckoutPercent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}measured_checkout_percent'],
+      )!,
+      isPreset: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_preset'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BotProfilesTable createAlias(String alias) {
+    return $BotProfilesTable(attachedDatabase, alias);
+  }
+}
+
+class BotProfileRow extends DataClass implements Insertable<BotProfileRow> {
+  final String id;
+  final String name;
+  final double sigmaMm;
+  final double targetAverage;
+  final double measuredCheckoutPercent;
+  final bool isPreset;
+  final DateTime createdAt;
+  const BotProfileRow({
+    required this.id,
+    required this.name,
+    required this.sigmaMm,
+    required this.targetAverage,
+    required this.measuredCheckoutPercent,
+    required this.isPreset,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['sigma_mm'] = Variable<double>(sigmaMm);
+    map['target_average'] = Variable<double>(targetAverage);
+    map['measured_checkout_percent'] = Variable<double>(
+      measuredCheckoutPercent,
+    );
+    map['is_preset'] = Variable<bool>(isPreset);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  BotProfilesCompanion toCompanion(bool nullToAbsent) {
+    return BotProfilesCompanion(
+      id: Value(id),
+      name: Value(name),
+      sigmaMm: Value(sigmaMm),
+      targetAverage: Value(targetAverage),
+      measuredCheckoutPercent: Value(measuredCheckoutPercent),
+      isPreset: Value(isPreset),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory BotProfileRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BotProfileRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      sigmaMm: serializer.fromJson<double>(json['sigmaMm']),
+      targetAverage: serializer.fromJson<double>(json['targetAverage']),
+      measuredCheckoutPercent: serializer.fromJson<double>(
+        json['measuredCheckoutPercent'],
+      ),
+      isPreset: serializer.fromJson<bool>(json['isPreset']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'sigmaMm': serializer.toJson<double>(sigmaMm),
+      'targetAverage': serializer.toJson<double>(targetAverage),
+      'measuredCheckoutPercent': serializer.toJson<double>(
+        measuredCheckoutPercent,
+      ),
+      'isPreset': serializer.toJson<bool>(isPreset),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  BotProfileRow copyWith({
+    String? id,
+    String? name,
+    double? sigmaMm,
+    double? targetAverage,
+    double? measuredCheckoutPercent,
+    bool? isPreset,
+    DateTime? createdAt,
+  }) => BotProfileRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    sigmaMm: sigmaMm ?? this.sigmaMm,
+    targetAverage: targetAverage ?? this.targetAverage,
+    measuredCheckoutPercent:
+        measuredCheckoutPercent ?? this.measuredCheckoutPercent,
+    isPreset: isPreset ?? this.isPreset,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  BotProfileRow copyWithCompanion(BotProfilesCompanion data) {
+    return BotProfileRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      sigmaMm: data.sigmaMm.present ? data.sigmaMm.value : this.sigmaMm,
+      targetAverage: data.targetAverage.present
+          ? data.targetAverage.value
+          : this.targetAverage,
+      measuredCheckoutPercent: data.measuredCheckoutPercent.present
+          ? data.measuredCheckoutPercent.value
+          : this.measuredCheckoutPercent,
+      isPreset: data.isPreset.present ? data.isPreset.value : this.isPreset,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BotProfileRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('sigmaMm: $sigmaMm, ')
+          ..write('targetAverage: $targetAverage, ')
+          ..write('measuredCheckoutPercent: $measuredCheckoutPercent, ')
+          ..write('isPreset: $isPreset, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    sigmaMm,
+    targetAverage,
+    measuredCheckoutPercent,
+    isPreset,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BotProfileRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.sigmaMm == this.sigmaMm &&
+          other.targetAverage == this.targetAverage &&
+          other.measuredCheckoutPercent == this.measuredCheckoutPercent &&
+          other.isPreset == this.isPreset &&
+          other.createdAt == this.createdAt);
+}
+
+class BotProfilesCompanion extends UpdateCompanion<BotProfileRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<double> sigmaMm;
+  final Value<double> targetAverage;
+  final Value<double> measuredCheckoutPercent;
+  final Value<bool> isPreset;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const BotProfilesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.sigmaMm = const Value.absent(),
+    this.targetAverage = const Value.absent(),
+    this.measuredCheckoutPercent = const Value.absent(),
+    this.isPreset = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BotProfilesCompanion.insert({
+    required String id,
+    required String name,
+    required double sigmaMm,
+    required double targetAverage,
+    required double measuredCheckoutPercent,
+    required bool isPreset,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       sigmaMm = Value(sigmaMm),
+       targetAverage = Value(targetAverage),
+       measuredCheckoutPercent = Value(measuredCheckoutPercent),
+       isPreset = Value(isPreset),
+       createdAt = Value(createdAt);
+  static Insertable<BotProfileRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<double>? sigmaMm,
+    Expression<double>? targetAverage,
+    Expression<double>? measuredCheckoutPercent,
+    Expression<bool>? isPreset,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (sigmaMm != null) 'sigma_mm': sigmaMm,
+      if (targetAverage != null) 'target_average': targetAverage,
+      if (measuredCheckoutPercent != null)
+        'measured_checkout_percent': measuredCheckoutPercent,
+      if (isPreset != null) 'is_preset': isPreset,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BotProfilesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<double>? sigmaMm,
+    Value<double>? targetAverage,
+    Value<double>? measuredCheckoutPercent,
+    Value<bool>? isPreset,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return BotProfilesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      sigmaMm: sigmaMm ?? this.sigmaMm,
+      targetAverage: targetAverage ?? this.targetAverage,
+      measuredCheckoutPercent:
+          measuredCheckoutPercent ?? this.measuredCheckoutPercent,
+      isPreset: isPreset ?? this.isPreset,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (sigmaMm.present) {
+      map['sigma_mm'] = Variable<double>(sigmaMm.value);
+    }
+    if (targetAverage.present) {
+      map['target_average'] = Variable<double>(targetAverage.value);
+    }
+    if (measuredCheckoutPercent.present) {
+      map['measured_checkout_percent'] = Variable<double>(
+        measuredCheckoutPercent.value,
+      );
+    }
+    if (isPreset.present) {
+      map['is_preset'] = Variable<bool>(isPreset.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BotProfilesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('sigmaMm: $sigmaMm, ')
+          ..write('targetAverage: $targetAverage, ')
+          ..write('measuredCheckoutPercent: $measuredCheckoutPercent, ')
+          ..write('isPreset: $isPreset, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2227,6 +2774,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $MatchPlayersTable matchPlayers = $MatchPlayersTable(this);
   late final $TurnsTable turns = $TurnsTable(this);
   late final $ThrowsTable throws = $ThrowsTable(this);
+  late final $BotProfilesTable botProfiles = $BotProfilesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2237,6 +2785,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     matchPlayers,
     turns,
     throws,
+    botProfiles,
   ];
 }
 
@@ -2621,6 +3170,7 @@ typedef $$MatchPlayersTableCreateCompanionBuilder =
       required String playerId,
       required String playerName,
       required int orderIndex,
+      Value<String?> botProfileId,
       Value<int> rowid,
     });
 typedef $$MatchPlayersTableUpdateCompanionBuilder =
@@ -2629,6 +3179,7 @@ typedef $$MatchPlayersTableUpdateCompanionBuilder =
       Value<String> playerId,
       Value<String> playerName,
       Value<int> orderIndex,
+      Value<String?> botProfileId,
       Value<int> rowid,
     });
 
@@ -2658,6 +3209,11 @@ class $$MatchPlayersTableFilterComposer
 
   ColumnFilters<int> get orderIndex => $composableBuilder(
     column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get botProfileId => $composableBuilder(
+    column: $table.botProfileId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2690,6 +3246,11 @@ class $$MatchPlayersTableOrderingComposer
     column: $table.orderIndex,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get botProfileId => $composableBuilder(
+    column: $table.botProfileId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MatchPlayersTableAnnotationComposer
@@ -2714,6 +3275,11 @@ class $$MatchPlayersTableAnnotationComposer
 
   GeneratedColumn<int> get orderIndex => $composableBuilder(
     column: $table.orderIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get botProfileId => $composableBuilder(
+    column: $table.botProfileId,
     builder: (column) => column,
   );
 }
@@ -2753,12 +3319,14 @@ class $$MatchPlayersTableTableManager
                 Value<String> playerId = const Value.absent(),
                 Value<String> playerName = const Value.absent(),
                 Value<int> orderIndex = const Value.absent(),
+                Value<String?> botProfileId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MatchPlayersCompanion(
                 matchId: matchId,
                 playerId: playerId,
                 playerName: playerName,
                 orderIndex: orderIndex,
+                botProfileId: botProfileId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2767,12 +3335,14 @@ class $$MatchPlayersTableTableManager
                 required String playerId,
                 required String playerName,
                 required int orderIndex,
+                Value<String?> botProfileId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MatchPlayersCompanion.insert(
                 matchId: matchId,
                 playerId: playerId,
                 playerName: playerName,
                 orderIndex: orderIndex,
+                botProfileId: botProfileId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -3364,6 +3934,248 @@ typedef $$ThrowsTableProcessedTableManager =
       ThrowRow,
       PrefetchHooks Function()
     >;
+typedef $$BotProfilesTableCreateCompanionBuilder =
+    BotProfilesCompanion Function({
+      required String id,
+      required String name,
+      required double sigmaMm,
+      required double targetAverage,
+      required double measuredCheckoutPercent,
+      required bool isPreset,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$BotProfilesTableUpdateCompanionBuilder =
+    BotProfilesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<double> sigmaMm,
+      Value<double> targetAverage,
+      Value<double> measuredCheckoutPercent,
+      Value<bool> isPreset,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$BotProfilesTableFilterComposer
+    extends Composer<_$AppDatabase, $BotProfilesTable> {
+  $$BotProfilesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get sigmaMm => $composableBuilder(
+    column: $table.sigmaMm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get targetAverage => $composableBuilder(
+    column: $table.targetAverage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get measuredCheckoutPercent => $composableBuilder(
+    column: $table.measuredCheckoutPercent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPreset => $composableBuilder(
+    column: $table.isPreset,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BotProfilesTableOrderingComposer
+    extends Composer<_$AppDatabase, $BotProfilesTable> {
+  $$BotProfilesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get sigmaMm => $composableBuilder(
+    column: $table.sigmaMm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get targetAverage => $composableBuilder(
+    column: $table.targetAverage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get measuredCheckoutPercent => $composableBuilder(
+    column: $table.measuredCheckoutPercent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPreset => $composableBuilder(
+    column: $table.isPreset,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BotProfilesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BotProfilesTable> {
+  $$BotProfilesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get sigmaMm =>
+      $composableBuilder(column: $table.sigmaMm, builder: (column) => column);
+
+  GeneratedColumn<double> get targetAverage => $composableBuilder(
+    column: $table.targetAverage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get measuredCheckoutPercent => $composableBuilder(
+    column: $table.measuredCheckoutPercent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isPreset =>
+      $composableBuilder(column: $table.isPreset, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$BotProfilesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BotProfilesTable,
+          BotProfileRow,
+          $$BotProfilesTableFilterComposer,
+          $$BotProfilesTableOrderingComposer,
+          $$BotProfilesTableAnnotationComposer,
+          $$BotProfilesTableCreateCompanionBuilder,
+          $$BotProfilesTableUpdateCompanionBuilder,
+          (
+            BotProfileRow,
+            BaseReferences<_$AppDatabase, $BotProfilesTable, BotProfileRow>,
+          ),
+          BotProfileRow,
+          PrefetchHooks Function()
+        > {
+  $$BotProfilesTableTableManager(_$AppDatabase db, $BotProfilesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BotProfilesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BotProfilesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BotProfilesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double> sigmaMm = const Value.absent(),
+                Value<double> targetAverage = const Value.absent(),
+                Value<double> measuredCheckoutPercent = const Value.absent(),
+                Value<bool> isPreset = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BotProfilesCompanion(
+                id: id,
+                name: name,
+                sigmaMm: sigmaMm,
+                targetAverage: targetAverage,
+                measuredCheckoutPercent: measuredCheckoutPercent,
+                isPreset: isPreset,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required double sigmaMm,
+                required double targetAverage,
+                required double measuredCheckoutPercent,
+                required bool isPreset,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => BotProfilesCompanion.insert(
+                id: id,
+                name: name,
+                sigmaMm: sigmaMm,
+                targetAverage: targetAverage,
+                measuredCheckoutPercent: measuredCheckoutPercent,
+                isPreset: isPreset,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BotProfilesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BotProfilesTable,
+      BotProfileRow,
+      $$BotProfilesTableFilterComposer,
+      $$BotProfilesTableOrderingComposer,
+      $$BotProfilesTableAnnotationComposer,
+      $$BotProfilesTableCreateCompanionBuilder,
+      $$BotProfilesTableUpdateCompanionBuilder,
+      (
+        BotProfileRow,
+        BaseReferences<_$AppDatabase, $BotProfilesTable, BotProfileRow>,
+      ),
+      BotProfileRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3378,4 +4190,6 @@ class $AppDatabaseManager {
       $$TurnsTableTableManager(_db, _db.turns);
   $$ThrowsTableTableManager get throws =>
       $$ThrowsTableTableManager(_db, _db.throws);
+  $$BotProfilesTableTableManager get botProfiles =>
+      $$BotProfilesTableTableManager(_db, _db.botProfiles);
 }

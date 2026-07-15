@@ -4,8 +4,12 @@ import 'unique_id.dart';
 /// than anonymous "P1"/"P2", so stats in later phases can follow a person
 /// across matches.
 class Player {
-  Player({required this.id, required this.name, DateTime? createdAt})
-      : createdAt = createdAt ?? DateTime.now();
+  Player({
+    required this.id,
+    required this.name,
+    DateTime? createdAt,
+    this.botProfileId,
+  }) : createdAt = createdAt ?? DateTime.now();
 
   /// Creates a player with a generated id - unique enough for a single
   /// local device and avoids a uuid dependency.
@@ -18,9 +22,17 @@ class Player {
   final String name;
   final DateTime createdAt;
 
+  /// Set when this "player" is actually a bot opponent, pointing back at
+  /// the [BotProfile] it was created from. Null for every human player.
+  /// This is what lets a bot take part in a match using all the same
+  /// Player/Turn/Throw plumbing as a human, while still being
+  /// distinguishable in match history (see MatchPlayers.botProfileId).
+  final String? botProfileId;
+
   Map<String, Object?> toJson() => {
         'id': id,
         'name': name,
         'createdAt': createdAt.toIso8601String(),
+        'botProfileId': botProfileId,
       };
 }

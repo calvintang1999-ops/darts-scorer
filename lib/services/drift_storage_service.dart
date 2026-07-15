@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show OrderingTerm, Value;
 import 'package:meta/meta.dart';
 
+import '../models/bot_profile.dart';
 import '../models/dart_position.dart';
 import '../models/match_record.dart';
 import '../models/player.dart';
@@ -77,6 +78,7 @@ class DriftStorageService implements StorageService {
                 playerId: player.id,
                 playerName: player.name,
                 orderIndex: i,
+                botProfileId: Value(player.botProfileId),
               ),
             );
       }
@@ -132,8 +134,7 @@ class DriftStorageService implements StorageService {
             ..orderBy([(t) => OrderingTerm.asc(t.orderIndex)]))
           .get();
       final players = playerRows
-          .map((r) => playerLookup[r.playerId] ??
-              _fallbackPlayer(r.playerId, r.playerName, matchRow.finishedAt))
+          .map((r) => _matchParticipant(r, playerLookup, matchRow.finishedAt))
           .toList();
 
       final turnRows = await (_db.select(_db.turns)
@@ -181,6 +182,24 @@ class DriftStorageService implements StorageService {
   Player _fallbackPlayer(String id, String name, DateTime matchFinishedAt) =>
       Player(id: id, name: name, createdAt: matchFinishedAt);
 
+  /// Rebuilds a match participant from its [MatchPlayerRow], stamping
+  /// [MatchPlayerRow.botProfileId] onto the result so bots stay
+  /// distinguishable from humans in reconstructed history. A bot's
+  /// playerId is never in the human roster, so it always falls back to
+  /// [_fallbackPlayer] just like a deleted human would.
+  Player _matchParticipant(MatchPlayerRow row,
+      Map<String, Player> playerLookup, DateTime matchFinishedAt) {
+    final base = playerLookup[row.playerId] ??
+        _fallbackPlayer(row.playerId, row.playerName, matchFinishedAt);
+    if (row.botProfileId == null) return base;
+    return Player(
+      id: base.id,
+      name: base.name,
+      createdAt: base.createdAt,
+      botProfileId: row.botProfileId,
+    );
+  }
+
   Throw _throwFromRow(ThrowRow row, Player player) {
     DartPosition? landingPosition;
     if (row.landingRadius != null &&
@@ -203,6 +222,22 @@ class DriftStorageService implements StorageService {
       intendedTarget: row.intendedTarget,
       timestamp: row.timestamp,
     );
+  }
+
+  @override
+  Future<List<BotProfile>> loadBotProfiles() async {
+    final rows = await _db.select(_db.botProfiles).get();
+    return rows
+        .map((r) => BotProfile(
+              id: r.id,
+              name: r.name,
+              sigmaMm: r.sigmaMm,
+              targetAverage: r.targetAverage,
+              measuredCheckoutPercent: r.measuredCheckoutPercent,
+              isPreset: r.isPreset,
+              createdAt: r.createdAt,
+            ))
+        .toList();
   }
 
   String? _winnerName(MatchRecord match) {

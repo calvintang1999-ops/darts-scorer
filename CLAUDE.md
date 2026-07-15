@@ -18,14 +18,24 @@ time. Please:
 1. **Games** (now): X01 fully working; Cricket, Split Score, Round the
    Clock next; later Shanghai, Halve-It, Bob's 27, Killer, training routines.
 2. **Bot opponent**: a configurable computer opponent to play against.
+   - Phase 3a (done): bot engine core - `BoardGeometry.aimPointFor` /
+     `segmentAt` (lib/models/dart_position.dart), `Segment`
+     (lib/models/segment.dart), `BotArm`/`GaussianArm`/`ThrowContext`
+     (lib/services/bot/), `X01Strategy`/`X01Brain` (lib/games/x01/), the
+     `BotProfiles` table + 8 seeded presets (schema v4, calibrated via
+     tool/calibrate_bot.dart), and `Player.botProfileId` /
+     `MatchPlayers.botProfileId` so a bot can be a match participant.
+   - Phase 3b (next): brains for Cricket/Half It/Round the Clock, plus
+     wiring a bot into the actual match UI (bot profile picker, the play
+     screens driving BotBrain + BotArm turn by turn).
 3. **Voice announcer**: spoken scores ("One hundred and eighty!").
 4. **Camera auto-scoring**: a camera watches the board and enters throws
    automatically.
 5. **Personal statistics**: 3-dart average, checkout %, first-nine average,
    heatmaps by board position and by segment.
 
-Phases 2-5 are NOT built yet, but the data model is already shaped for
-them - don't simplify it away.
+Phases 2-5 are NOT built yet (except Phase 3a above), but the data model
+is already shaped for them - don't simplify it away.
 
 ## Architecture rules
 

@@ -13,6 +13,9 @@ enum ThrowSource {
   /// The camera detected one thing but a human corrected it. Logging these
   /// separately gives us training/tuning data for the camera model.
   corrected,
+
+  /// Simulated by a bot opponent's arm (Phase 3).
+  bot,
 }
 
 /// A single dart. This is the atom of the whole app - every game mode,

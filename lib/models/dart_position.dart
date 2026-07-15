@@ -8,6 +8,10 @@ import 'dart:math' as math;
 /// (in mm, from the centre of a regulation board) are divided by 170mm,
 /// which is the centre-to-outer-double-wire distance.
 abstract final class BoardGeometry {
+  /// mm from the board centre to the outer double wire - the divisor that
+  /// turns a real-world mm measurement into a normalised radius, and back.
+  static const double mmPerNormalisedUnit = 170.0;
+
   /// Outer edge of the inner bull (the 50). 6.35mm on a real board.
   static const double innerBullRadius = 6.35 / 170.0;
 
@@ -30,6 +34,60 @@ abstract final class BoardGeometry {
 
   /// Each of the 20 wedges spans 18 degrees (360 / 20).
   static const double degreesPerSegment = 360.0 / 20.0;
+
+  /// Resolves a position to the segment and ring it lands in. Just calls
+  /// through to [DartPosition.toSegment] - this static form exists so bot
+  /// code can pair it visually with [aimPointFor].
+  static SegmentHit segmentAt(DartPosition position) => position.toSegment();
+
+  /// The centre point of a named bed, in the same short vocabulary the
+  /// checkout chart uses (see checkouts.dart): "T20" (treble), "D16"
+  /// (double), "5" (single, no prefix), "Bull" (the 50), "25" (the outer
+  /// bull). Used by bot brains to turn a chosen target into an aim point.
+  static DartPosition aimPointFor(String label) {
+    if (label == 'Bull') {
+      // Dead centre - a bull's-eye has no angle that means anything more
+      // than any other, so 0 is as good as any.
+      return const DartPosition(radiusNormalised: 0, angleDegrees: 0);
+    }
+    if (label == '25') {
+      final radius = (innerBullRadius + outerBullRadius) / 2;
+      return DartPosition(radiusNormalised: radius, angleDegrees: 0);
+    }
+
+    int multiplier;
+    String numberPart;
+    if (label.startsWith('T')) {
+      multiplier = 3;
+      numberPart = label.substring(1);
+    } else if (label.startsWith('D')) {
+      multiplier = 2;
+      numberPart = label.substring(1);
+    } else {
+      multiplier = 1;
+      numberPart = label;
+    }
+
+    final number = int.parse(numberPart);
+    final wedgeIndex = segmentsClockwiseFromTop.indexOf(number);
+    final angle = wedgeIndex * degreesPerSegment;
+
+    final double radius;
+    switch (multiplier) {
+      case 3:
+        radius = (trebleInnerRadius + trebleOuterRadius) / 2;
+        break;
+      case 2:
+        radius = (doubleInnerRadius + doubleOuterRadius) / 2;
+        break;
+      default:
+        // The "big single" real players actually aim for: the outer
+        // single region between the treble and double rings, not the
+        // narrower inner single region next to the bull.
+        radius = (trebleOuterRadius + doubleInnerRadius) / 2;
+    }
+    return DartPosition(radiusNormalised: radius, angleDegrees: angle);
+  }
 }
 
 /// The segment value used for the bull. Outer bull = 25 x 1, inner bull
@@ -147,5 +205,23 @@ class DartPosition {
     // We want degrees clockwise from the top, so convert.
     final angleFromTop = (math.atan2(x, y) * 180.0 / math.pi + 360.0) % 360.0;
     return DartPosition(radiusNormalised: radius, angleDegrees: angleFromTop);
+  }
+
+  /// Builds a position from real-world millimetres measured from the board
+  /// centre (same x = east, y = north convention as [fromCartesian]). This
+  /// is what the bot arm uses: it adds Gaussian noise in mm, then converts
+  /// back through here to get a normalised [DartPosition].
+  factory DartPosition.fromCartesianMm(double xMm, double yMm) =>
+      DartPosition.fromCartesian(
+        xMm / BoardGeometry.mmPerNormalisedUnit,
+        yMm / BoardGeometry.mmPerNormalisedUnit,
+      );
+
+  /// The mirror of [DartPosition.fromCartesianMm]: this position's x/y
+  /// offset from the board centre, in real-world millimetres.
+  ({double xMm, double yMm}) toCartesianMm() {
+    final radians = angleDegrees * math.pi / 180.0;
+    final radiusMm = radiusNormalised * BoardGeometry.mmPerNormalisedUnit;
+    return (xMm: radiusMm * math.sin(radians), yMm: radiusMm * math.cos(radians));
   }
 }

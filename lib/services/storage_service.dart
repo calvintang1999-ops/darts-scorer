@@ -1,5 +1,7 @@
+import '../models/bot_profile.dart';
 import '../models/match_record.dart';
 import '../models/player.dart';
+import 'bot/bot_calibration_constants.dart';
 
 /// The persistence boundary. Game and screen code only ever talks to this
 /// interface, so swapping the in-memory version for real on-device storage
@@ -15,6 +17,9 @@ abstract class StorageService {
 
   Future<void> saveMatch(MatchRecord match);
   Future<List<MatchRecord>> loadMatchHistory();
+
+  /// The 8 presets plus any custom bot profiles (future career mode).
+  Future<List<BotProfile>> loadBotProfiles();
 }
 
 /// Phase-1 implementation: everything lives in memory and is lost when the
@@ -28,10 +33,23 @@ class InMemoryStorageService implements StorageService {
   /// same as on-device.
   InMemoryStorageService() {
     _players.add(Player.create('Calvin'));
+    final now = DateTime.now();
+    for (final preset in botCalibrationPresets) {
+      _botProfiles.add(BotProfile(
+        id: 'preset-${preset.name}',
+        name: preset.name,
+        sigmaMm: preset.sigmaMm,
+        targetAverage: preset.targetAverage,
+        measuredCheckoutPercent: preset.measuredCheckoutPercent,
+        isPreset: true,
+        createdAt: now,
+      ));
+    }
   }
 
   final List<Player> _players = [];
   final List<MatchRecord> _matches = [];
+  final List<BotProfile> _botProfiles = [];
 
   @override
   Future<void> savePlayers(List<Player> players) async {
@@ -50,4 +68,7 @@ class InMemoryStorageService implements StorageService {
 
   @override
   Future<List<MatchRecord>> loadMatchHistory() async => List.of(_matches);
+
+  @override
+  Future<List<BotProfile>> loadBotProfiles() async => List.of(_botProfiles);
 }
