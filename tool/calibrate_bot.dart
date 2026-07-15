@@ -28,14 +28,14 @@ void main() {
   final legsPerEvaluation = legsEnv != null ? int.parse(legsEnv) : 5000;
 
   const presets = [
-    (name: 'Bot 35', targetAverage: 35.0),
-    (name: 'Bot 45', targetAverage: 45.0),
-    (name: 'Bot 55', targetAverage: 55.0),
-    (name: 'Bot 65', targetAverage: 65.0),
-    (name: 'Bot 75', targetAverage: 75.0),
-    (name: 'Bot 85', targetAverage: 85.0),
-    (name: 'Pro (95)', targetAverage: 95.0),
-    (name: 'World Class (105)', targetAverage: 105.0),
+    (name: 'Rookie Ray', targetAverage: 35.0),
+    (name: 'Steady Steve', targetAverage: 45.0),
+    (name: 'Lucky Lou', targetAverage: 55.0),
+    (name: 'Sharp Sam', targetAverage: 65.0),
+    (name: 'Bullseye Bex', targetAverage: 75.0),
+    (name: 'Cool Hand Cody', targetAverage: 85.0),
+    (name: 'The Professor', targetAverage: 95.0),
+    (name: 'The Governor', targetAverage: 105.0),
   ];
 
   stdout.writeln('name,targetAverage,sigmaMm,measuredAverage,checkoutPercent');

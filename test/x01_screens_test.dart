@@ -174,7 +174,7 @@ void main() {
     final storage = InMemoryStorageService();
     final profiles = await storage.loadBotProfiles();
     final bot = Player.bot(
-        profiles.firstWhere((p) => p.name == 'World Class (105)'));
+        profiles.firstWhere((p) => p.name == 'The Governor'));
     final human = Player.create('Human');
 
     // Same provider set as the "winner panel" test above - X01PlayScreen
@@ -231,7 +231,7 @@ void main() {
     final storage = InMemoryStorageService();
     final profiles = await storage.loadBotProfiles();
     final bot = Player.bot(
-        profiles.firstWhere((p) => p.name == 'World Class (105)'));
+        profiles.firstWhere((p) => p.name == 'The Governor'));
     final human1 = Player.create('Human One');
     final human2 = Player.create('Human Two');
 
@@ -295,7 +295,7 @@ void main() {
     final storage = InMemoryStorageService();
     final profiles = await storage.loadBotProfiles();
     final bot = Player.bot(
-        profiles.firstWhere((p) => p.name == 'World Class (105)'));
+        profiles.firstWhere((p) => p.name == 'The Governor'));
     final human = Player.create('Human');
 
     await tester.pumpWidget(MaterialApp(
@@ -343,9 +343,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('X01 setup'), findsOneWidget);
 
-    await tester.ensureVisible(find.textContaining('World Class (105)'));
+    await tester.ensureVisible(find.textContaining('The Governor'));
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('World Class (105)'));
+    await tester.tap(find.textContaining('The Governor'));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Start game'));

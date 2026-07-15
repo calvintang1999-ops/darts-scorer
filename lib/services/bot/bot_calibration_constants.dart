@@ -31,21 +31,21 @@ class BotCalibrationPreset {
 
 const List<BotCalibrationPreset> botCalibrationPresets = [
   BotCalibrationPreset(
-      name: 'Bot 35', targetAverage: 35, sigmaMm: 23.84, measuredCheckoutPercent: 9.67),
+      name: 'Rookie Ray', targetAverage: 35, sigmaMm: 23.84, measuredCheckoutPercent: 9.67),
   BotCalibrationPreset(
-      name: 'Bot 45', targetAverage: 45, sigmaMm: 18.38, measuredCheckoutPercent: 14.10),
+      name: 'Steady Steve', targetAverage: 45, sigmaMm: 18.38, measuredCheckoutPercent: 14.10),
   BotCalibrationPreset(
-      name: 'Bot 55', targetAverage: 55, sigmaMm: 14.78, measuredCheckoutPercent: 19.33),
+      name: 'Lucky Lou', targetAverage: 55, sigmaMm: 14.78, measuredCheckoutPercent: 19.33),
   BotCalibrationPreset(
-      name: 'Bot 65', targetAverage: 65, sigmaMm: 12.18, measuredCheckoutPercent: 24.74),
+      name: 'Sharp Sam', targetAverage: 65, sigmaMm: 12.18, measuredCheckoutPercent: 24.74),
   BotCalibrationPreset(
-      name: 'Bot 75', targetAverage: 75, sigmaMm: 10.19, measuredCheckoutPercent: 30.31),
+      name: 'Bullseye Bex', targetAverage: 75, sigmaMm: 10.19, measuredCheckoutPercent: 30.31),
   BotCalibrationPreset(
-      name: 'Bot 85', targetAverage: 85, sigmaMm: 8.58, measuredCheckoutPercent: 35.74),
+      name: 'Cool Hand Cody', targetAverage: 85, sigmaMm: 8.58, measuredCheckoutPercent: 35.74),
   BotCalibrationPreset(
-      name: 'Pro (95)', targetAverage: 95, sigmaMm: 7.09, measuredCheckoutPercent: 42.39),
+      name: 'The Professor', targetAverage: 95, sigmaMm: 7.09, measuredCheckoutPercent: 42.39),
   BotCalibrationPreset(
-      name: 'World Class (105)',
+      name: 'The Governor',
       targetAverage: 105,
       sigmaMm: 5.85,
       measuredCheckoutPercent: 50.33),

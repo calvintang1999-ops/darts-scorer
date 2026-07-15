@@ -1,5 +1,6 @@
 import 'package:darts/games/x01/x01_config.dart';
 import 'package:darts/games/x01/x01_game.dart';
+import 'package:darts/models/bot_profile.dart';
 import 'package:darts/models/game_event.dart';
 import 'package:darts/models/player.dart';
 import 'package:darts/models/throw.dart';
@@ -132,6 +133,43 @@ void main() {
       await Future<void>.value();
 
       expect(events.single.message, isNot(contains('require')));
+    });
+
+    test(
+        'a bot visit never states the bot\'s own "you require", but reminds '
+        'the one human what they require', () async {
+      final bot = Player.bot(BotProfile(
+        id: 'bot-1',
+        name: 'The Governor',
+        sigmaMm: 5.85,
+        targetAverage: 105,
+        measuredCheckoutPercent: 50.33,
+        isPreset: true,
+      ));
+      final game = X01Game(
+        players: [p0, bot],
+        config: const X01Config(startingScore: 100),
+      );
+      final events = listen(game);
+
+      // p0 (the human) throws first and leaves a finishable 80.
+      throwDart(game, p0, 20, 1);
+      throwDart(game, p0, 0, 1);
+      throwDart(game, p0, 0, 1);
+      await Future<void>.value();
+      expect(events.single.message, contains('You require 80'));
+
+      // The bot leaves itself on a *different* finishable score (40, via a
+      // treble-20 visit) - its message should still call out the human's
+      // 80, never the bot's own 40.
+      throwDart(game, bot, 20, 3);
+      throwDart(game, bot, 0, 1);
+      throwDart(game, bot, 0, 1);
+      await Future<void>.value();
+
+      expect(events.last.message, startsWith('The Governor, 60'));
+      expect(events.last.message, contains('You require 80'));
+      expect(events.last.message, isNot(contains('require 40')));
     });
   });
 }

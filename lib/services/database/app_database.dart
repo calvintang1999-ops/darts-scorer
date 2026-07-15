@@ -79,7 +79,7 @@ class AppDatabase extends _$AppDatabase {
     ));
   }
 
-  /// Seeds the 8 preset bots ("Bot 35" .. "World Class (105)") - runs once,
+  /// Seeds the 8 preset bots ("Rookie Ray" .. "The Governor") - runs once,
   /// either when the database is first created or when an existing
   /// database upgrades into version 4. Presets are never deleted, so this
   /// never needs to run again after that.

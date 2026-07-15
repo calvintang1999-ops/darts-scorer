@@ -23,11 +23,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// guard can be excluded from a fast local loop with
 /// `flutter test --exclude-tags=slow` without needing a second tag added.
 void main() {
-  test('World Class (105) beats Bot 45 in a strong majority of 200 legs', () {
+  test('The Governor beats Steady Steve in a strong majority of 200 legs', () {
     final weak =
-        botCalibrationPresets.firstWhere((p) => p.name == 'Bot 45');
+        botCalibrationPresets.firstWhere((p) => p.name == 'Steady Steve');
     final strong = botCalibrationPresets
-        .firstWhere((p) => p.name == 'World Class (105)');
+        .firstWhere((p) => p.name == 'The Governor');
 
     const brain = X01Brain();
     // Seeded so this can never flake.

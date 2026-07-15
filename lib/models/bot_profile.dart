@@ -1,7 +1,7 @@
 /// A saved bot "character" a human can play against: how accurate its arm
 /// is, plus informational stats used to describe it on a picker screen.
 ///
-/// The 8 presets ("Bot 35" .. "World Class (105)") are seeded into the
+/// The 8 presets ("Rookie Ray" .. "The Governor") are seeded into the
 /// database on first run (see AppDatabase) and can't be deleted. Custom
 /// profiles (future career mode - not built yet) are ordinary rows with
 /// [isPreset] false; nothing here assumes presets are the only bots.

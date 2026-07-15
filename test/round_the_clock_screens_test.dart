@@ -179,7 +179,7 @@ void main() {
     final storage = InMemoryStorageService();
     final profiles = await storage.loadBotProfiles();
     final bot = Player.bot(
-        profiles.firstWhere((p) => p.name == 'World Class (105)'));
+        profiles.firstWhere((p) => p.name == 'The Governor'));
     final human = Player.create('Human');
 
     await tester.pumpWidget(MaterialApp(

@@ -174,8 +174,8 @@ void main() {
       final profiles = await storage.loadBotProfiles();
       expect(profiles, hasLength(8));
       expect(profiles.every((p) => p.isPreset), true);
-      expect(profiles.map((p) => p.name), contains('Bot 35'));
-      expect(profiles.map((p) => p.name), contains('World Class (105)'));
+      expect(profiles.map((p) => p.name), contains('Rookie Ray'));
+      expect(profiles.map((p) => p.name), contains('The Governor'));
     });
 
     test('a bot match participant round-trips with its botProfileId',

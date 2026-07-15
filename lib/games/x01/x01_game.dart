@@ -153,14 +153,41 @@ class X01Game extends DartsGame {
   /// when X can actually be finished with a fresh 3 darts under this leg's
   /// out-rule. Naming a score nobody could check out (a "bogey" number, or
   /// simply too high) would be a caller stating the obvious for no reason.
+  ///
+  /// A human's own visit always gets this full treatment. A bot's visit
+  /// skips its own "you require" - the human listening doesn't need the
+  /// bot's checkout math - and instead (when there's exactly one human in
+  /// the match) reminds them what they themselves require, since that's
+  /// the number they actually need before their turn comes back around.
   String _visitAnnouncement(
       Player player, int visitTotal, int newScore, int playerIndex) {
+    if (player.botProfileId != null) {
+      return '${player.name}, $visitTotal${_humanReminder()}';
+    }
     final checkout = config.outRule == X01OutRule.double && opened[playerIndex]
         ? suggestCheckout(newScore, 3)
         : null;
     return checkout == null
         ? '${player.name}, $visitTotal'
         : '${player.name}, $visitTotal. You require $newScore';
+  }
+
+  /// ". You require N" for the match's one human player, only when N is
+  /// actually finishable - same gating as a human's own visit announcement.
+  /// Empty when the match doesn't have exactly one human (nothing
+  /// unambiguous to call "you").
+  String _humanReminder() {
+    final humanIndices = [
+      for (var i = 0; i < players.length; i++)
+        if (players[i].botProfileId == null) i
+    ];
+    if (humanIndices.length != 1) return '';
+    final humanIndex = humanIndices.single;
+    final humanScore = scores[humanIndex];
+    final checkout = config.outRule == X01OutRule.double && opened[humanIndex]
+        ? suggestCheckout(humanScore, 3)
+        : null;
+    return checkout == null ? '' : '. You require $humanScore';
   }
 
   @override

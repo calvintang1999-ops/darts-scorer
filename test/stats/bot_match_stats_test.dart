@@ -19,7 +19,7 @@ void main() {
     final human = Player.create('Alice');
     final bot = Player.bot(BotProfile(
       id: 'bot-1',
-      name: 'World Class (105)',
+      name: 'The Governor',
       sigmaMm: 5.85,
       targetAverage: 105,
       measuredCheckoutPercent: 50.33,
