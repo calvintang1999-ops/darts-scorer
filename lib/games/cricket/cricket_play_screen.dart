@@ -1,10 +1,18 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/dart_position.dart';
 import '../../models/match_record.dart';
 import '../../models/player.dart';
+import '../../models/throw.dart';
 import '../../services/announcer_service.dart';
+import '../../services/bot/bot_arm.dart';
+import '../../services/bot/bot_turn_screen_controller.dart';
+import '../../services/bot/gaussian_arm.dart';
+import '../../services/bot/throw_context.dart';
+import '../../services/bot_profiles_provider.dart';
 import '../../services/dart_counter_service.dart';
 import '../../services/stats/cricket_stats.dart';
 import '../../services/storage_service.dart';
@@ -17,6 +25,7 @@ import '../../widgets/rotate_board_dialog.dart';
 import '../../widgets/score_display.dart';
 import '../../widgets/segment_input_pad.dart';
 import '../../widgets/stat_tile.dart';
+import 'cricket_brain.dart';
 import 'cricket_config.dart';
 import 'cricket_game.dart';
 
@@ -37,6 +46,13 @@ class _CricketPlayScreenState extends State<CricketPlayScreen> {
   // safe, since by then the widget may already be detached from the tree.
   late final AnnouncerService _announcer;
   late final DartCounterService _dartCounter;
+  late final BotTurnScreenController _botTurns;
+
+  // One shared brain (all presets use the default strategy) and one arm
+  // per bot participant (accuracy - sigma - can differ preset to preset).
+  final _brain = const CricketBrain();
+  final Map<String, BotArm> _arms = {};
+  int _dartsThrownInMatch = 0;
 
   @override
   void initState() {
@@ -45,14 +61,69 @@ class _CricketPlayScreenState extends State<CricketPlayScreen> {
     _announcer = context.read<AnnouncerService>()..listenTo(widget.game);
     _dartCounter = context.read<DartCounterService>()
       ..listenTo(widget.game, onRotateReminderDue: _showRotateReminder);
+    _buildBotArms();
+    _botTurns = BotTurnScreenController(
+      game: widget.game,
+      isCurrentPlayerBot: () => widget.game.currentPlayer.botProfileId != null,
+      buildNextThrow: _buildNextBotThrow,
+    );
   }
 
   @override
   void dispose() {
+    _botTurns.dispose();
     widget.game.removeListener(_onGameChanged);
     _announcer.stopListening();
     _dartCounter.stopListening();
     super.dispose();
+  }
+
+  /// One [GaussianArm] per bot participant, built once from that bot's
+  /// profile (for its sigma) - looked up by botProfileId, not player id,
+  /// since BotProfilesProvider only knows about profiles, not this
+  /// match's participants.
+  void _buildBotArms() {
+    final profiles = context.read<BotProfilesProvider>().profiles;
+    for (final player in widget.game.players) {
+      final profileId = player.botProfileId;
+      if (profileId == null) continue;
+      final profile = profiles.where((p) => p.id == profileId).firstOrNull;
+      if (profile == null) continue;
+      _arms[player.id] = GaussianArm(sigmaMm: profile.sigmaMm, random: Random());
+    }
+  }
+
+  Throw _buildNextBotThrow() {
+    final game = widget.game;
+    final playerIndex = game.currentPlayerIndex;
+    final player = game.currentPlayer;
+    final myMarks = {for (final n in game.numbers) n: game.marks[n]![playerIndex]};
+    final opponentMarks = [
+      for (var i = 0; i < game.players.length; i++)
+        if (i != playerIndex)
+          {for (final n in game.numbers) n: game.marks[n]![i]}
+    ];
+    final opponentPoints = [
+      for (var i = 0; i < game.players.length; i++)
+        if (i != playerIndex) game.scores[i]
+    ];
+
+    final decision = _brain.nextAim(
+      numbers: game.numbers,
+      myMarks: myMarks,
+      opponentMarks: opponentMarks,
+      myPoints: game.scores[playerIndex],
+      opponentPoints: opponentPoints,
+      mode: game.config.mode,
+    );
+    final throwContext = ThrowContext.forAim(
+      decision.aimPoint,
+      isCheckoutAttempt: decision.isCheckoutAttempt,
+      dartIndexInTurn: game.currentTurnThrows.length,
+      dartIndexInMatch: _dartsThrownInMatch++,
+    );
+    return _arms[player.id]!.throwDart(decision.aimPoint, throwContext,
+        player: player, gameId: game.gameId);
   }
 
   void _showRotateReminder() {
@@ -60,7 +131,10 @@ class _CricketPlayScreenState extends State<CricketPlayScreen> {
     showRotateBoardDialog(context);
   }
 
-  void _onGameChanged() => _saveIfFinished();
+  void _onGameChanged() {
+    _botTurns.onGameChanged();
+    _saveIfFinished();
+  }
 
   void _saveIfFinished() {
     final game = widget.game;
@@ -114,6 +188,7 @@ class _CricketPlayScreenState extends State<CricketPlayScreen> {
                       player: game.currentPlayer,
                       gameId: game.gameId,
                       onThrow: game.applyThrow,
+                      enabled: game.currentPlayer.botProfileId == null,
                     ),
                   ],
                 );

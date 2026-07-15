@@ -1,3 +1,4 @@
+import 'bot_profile.dart';
 import 'unique_id.dart';
 
 /// A persistent player profile. Players are real people with names rather
@@ -16,6 +17,15 @@ class Player {
   factory Player.create(String name) => Player(
         id: generateLocalId(),
         name: name,
+      );
+
+  /// A match participant backed by a bot profile rather than a human. Uses
+  /// the profile's own id as the player id - simple, and unique enough
+  /// since only one instance of a given preset can be in a match at once.
+  factory Player.bot(BotProfile profile) => Player(
+        id: profile.id,
+        name: profile.name,
+        botProfileId: profile.id,
       );
 
   final String id;

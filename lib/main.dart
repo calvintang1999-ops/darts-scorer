@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'screens/home_screen.dart';
 import 'services/announcer_service.dart';
+import 'services/bot_profiles_provider.dart';
 import 'services/dart_counter_service.dart';
 import 'services/drift_storage_service.dart';
 import 'services/players_provider.dart';
@@ -31,6 +32,7 @@ class DartsApp extends StatelessWidget {
         Provider<StorageService>.value(value: storage),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => PlayersProvider(storage)),
+        ChangeNotifierProvider(create: (_) => BotProfilesProvider(storage)),
         // Plain Provider (not ChangeNotifier): the announcer has nothing
         // for the UI to watch, it just needs to outlive every play screen
         // so a rematch's new game can reuse the same TTS engine.

@@ -1,22 +1,7 @@
 import '../../models/dart_position.dart';
+import '../../services/bot/bot_aim_decision.dart';
 import 'checkouts.dart';
 import 'x01_strategy.dart';
-
-/// What [X01Brain] wants to do with its next dart: where to aim, whether
-/// hitting it would win the leg, and the board label it chose (kept around
-/// mainly so tests can assert on it without re-deriving it from the aim
-/// point).
-class BotAimDecision {
-  const BotAimDecision({
-    required this.aimPoint,
-    required this.isCheckoutAttempt,
-    required this.targetLabel,
-  });
-
-  final DartPosition aimPoint;
-  final bool isCheckoutAttempt;
-  final String targetLabel;
-}
 
 /// Decides where an X01 bot should aim its next dart. This is a pure
 /// function of the live game state (remaining score + darts left this

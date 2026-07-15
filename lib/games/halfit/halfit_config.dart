@@ -44,6 +44,13 @@ abstract class HalfItTarget {
   /// where more qualifying darts can only ever help, never hurt; most
   /// targets need the full turn to judge, so this defaults to false.
   bool isEarlyHit(List<Throw> dartsSoFar) => false;
+
+  /// The board label (see BoardGeometry.aimPointFor / checkouts.dart's
+  /// vocabulary) a bot should aim at for this target - the triple of a
+  /// specific number where that makes sense, the required area directly
+  /// otherwise. HalfItBrain never needs to know which kind of target it's
+  /// dealing with, same reasoning as [evaluate].
+  String get botAimLabel;
 }
 
 int _sumFaceValue(List<Throw> darts) =>
@@ -67,6 +74,9 @@ class NumberTarget extends HalfItTarget {
       points: _sumFaceValue(qualifying.toList()),
     );
   }
+
+  @override
+  String get botAimLabel => 'T$number';
 }
 
 /// Any double, on a numbered wedge or the inner/double bull (50) - it's
@@ -85,6 +95,10 @@ class AnyDoubleTarget extends HalfItTarget {
       points: _sumFaceValue(qualifying.toList()),
     );
   }
+
+  // Any double qualifies, so aim the highest-value one.
+  @override
+  String get botAimLabel => 'D20';
 }
 
 /// Any treble on a numbered wedge (there's no treble bull, so this never
@@ -103,6 +117,10 @@ class AnyTrebleTarget extends HalfItTarget {
       points: _sumFaceValue(qualifying.toList()),
     );
   }
+
+  // Any treble qualifies, so aim the highest-value one.
+  @override
+  String get botAimLabel => 'T20';
 }
 
 /// The bull, inner (50) or outer (25).
@@ -120,6 +138,9 @@ class BullseyeTarget extends HalfItTarget {
       points: _sumFaceValue(qualifying.toList()),
     );
   }
+
+  @override
+  String get botAimLabel => 'Bull';
 }
 
 /// The darts thrown must total exactly [total] (e.g. 41, 82, 123).
@@ -144,6 +165,12 @@ class ExactScoreTarget extends HalfItTarget {
       dartsSoFar.isNotEmpty &&
       dartsSoFar.length < 3 &&
       _sumFaceValue(dartsSoFar) == total;
+
+  // No single segment can compose an exact total on its own - "nothing
+  // fancier" for this target means just scoring as well as possible and
+  // hoping the total lands right.
+  @override
+  String get botAimLabel => 'T20';
 }
 
 /// All 3 darts must total [threshold] or more, or the whole turn misses.
@@ -161,6 +188,10 @@ class ScoreAtLeastTarget extends HalfItTarget {
     final hit = darts.length == 3 && sum >= threshold;
     return HalfItResult(hit: hit, points: hit ? sum : 0);
   }
+
+  // Maximise - the more points, the more comfortably this clears.
+  @override
+  String get botAimLabel => 'T20';
 }
 
 /// All 3 darts must land on the board (no misses) and total [max] or
@@ -182,6 +213,11 @@ class ScoreAtMostOnBoardTarget extends HalfItTarget {
     final hit = allOnBoard && sum <= max;
     return HalfItResult(hit: hit, points: hit ? sum : 0);
   }
+
+  // Aim low but still on the board - single 1 stays well under any
+  // realistic max while minimising the risk of scoring too much.
+  @override
+  String get botAimLabel => '1';
 }
 
 /// All 3 darts qualify only if, between them, they cover a black single,
@@ -208,6 +244,11 @@ class ThreeColoursTarget extends HalfItTarget {
     final hit = blacks == 1 && whites == 1 && ringHits == 1;
     return HalfItResult(hit: hit, points: hit ? _sumFaceValue(darts) : 0);
   }
+
+  // No single aim can compose this pattern - "nothing fancier" here means
+  // just scoring well and hoping dispersion turns up the right colours.
+  @override
+  String get botAimLabel => 'T20';
 }
 
 /// All 3 darts qualify only if they all landed in the same number wedge
@@ -226,6 +267,11 @@ class ThreeInSameBedTarget extends HalfItTarget {
         darts.every((d) => d.actualSegment == segment);
     return HalfItResult(hit: hit, points: hit ? _sumFaceValue(darts) : 0);
   }
+
+  // Aiming the same bed all three darts is exactly the right strategy
+  // here, not just a fallback.
+  @override
+  String get botAimLabel => 'T20';
 }
 
 /// All 3 darts qualify only if, in throw order, they are black single,
@@ -247,6 +293,11 @@ class BlackWhiteBlackTarget extends HalfItTarget {
             DartColour.black;
     return HalfItResult(hit: hit, points: hit ? _sumFaceValue(darts) : 0);
   }
+
+  // No single aim can compose this pattern - "nothing fancier" here means
+  // just scoring well and hoping dispersion turns up the right sequence.
+  @override
+  String get botAimLabel => 'T20';
 }
 
 /// Every target a randomized match can draw rounds from. The bull is

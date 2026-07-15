@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/player.dart';
+import '../../services/bot_profiles_provider.dart';
 import '../../services/players_provider.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/player_and_bot_picker.dart';
 import 'halfit_config.dart';
 import 'halfit_game.dart';
 import 'halfit_play_screen.dart';
@@ -46,12 +48,12 @@ class _HalfItConfigScreenState extends State<HalfItConfigScreen> {
     super.dispose();
   }
 
-  void _togglePlayer(Player player) {
+  void _toggleId(String id) {
     setState(() {
-      if (_selectedIds.contains(player.id)) {
-        _selectedIds.remove(player.id);
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
       } else if (_selectedIds.length < _maxPlayers) {
-        _selectedIds.add(player.id);
+        _selectedIds.add(id);
       }
     });
   }
@@ -79,6 +81,7 @@ class _HalfItConfigScreenState extends State<HalfItConfigScreen> {
   Widget build(BuildContext context) {
     final playersProvider = context.watch<PlayersProvider>();
     final roster = playersProvider.players;
+    final botProfiles = context.watch<BotProfilesProvider>().profiles;
 
     // Preselect the first roster player once it has loaded, so a fresh
     // install can quick-start without touching anything.
@@ -87,9 +90,10 @@ class _HalfItConfigScreenState extends State<HalfItConfigScreen> {
       _selectionInitialised = true;
     }
 
-    // Resolve ids -> players, keeping the tap order (= throwing order).
+    // Resolve ids -> players (human or bot), keeping tap order (=
+    // throwing order).
     final selectedPlayers = _selectedIds
-        .map((id) => roster.where((p) => p.id == id).firstOrNull)
+        .map((id) => resolvePlayerOrBot(id, roster, botProfiles))
         .whereType<Player>()
         .toList();
 
@@ -106,43 +110,14 @@ class _HalfItConfigScreenState extends State<HalfItConfigScreen> {
       body: ListView(
         padding: const EdgeInsets.all(SpacingTokens.md),
         children: [
-          sectionTitle('Players (1-8, tap in throwing order)'),
-          Wrap(
-            spacing: SpacingTokens.sm,
-            runSpacing: SpacingTokens.sm,
-            children: [
-              for (final player in roster)
-                FilterChip(
-                  label: Text(
-                    _selectedIds.contains(player.id)
-                        // Show throwing order on selected chips.
-                        ? '${_selectedIds.indexOf(player.id) + 1}. ${player.name}'
-                        : player.name,
-                  ),
-                  selected: _selectedIds.contains(player.id),
-                  onSelected: (_) => _togglePlayer(player),
-                ),
-            ],
-          ),
-          const SizedBox(height: SpacingTokens.sm),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _newPlayerController,
-                  decoration: const InputDecoration(
-                    labelText: 'New player name',
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (_) => _addPlayer(playersProvider),
-                ),
-              ),
-              const SizedBox(width: SpacingTokens.sm),
-              IconButton.filledTonal(
-                onPressed: () => _addPlayer(playersProvider),
-                icon: const Icon(Icons.person_add),
-              ),
-            ],
+          PlayerAndBotPicker(
+            roster: roster,
+            botProfiles: botProfiles,
+            selectedIds: _selectedIds,
+            onToggle: _toggleId,
+            maxPlayers: _maxPlayers,
+            newPlayerController: _newPlayerController,
+            onAddPlayer: () => _addPlayer(playersProvider),
           ),
           sectionTitle('Rounds'),
           _CounterRow(

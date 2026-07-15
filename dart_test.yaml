@@ -1,0 +1,6 @@
+tags:
+  # Whole-stack regression guards that simulate real matches rather than
+  # testing one unit in isolation - still fast today, but tagged so a
+  # future heavier one can be excluded from a quick local loop with
+  # `flutter test --exclude-tags=slow`.
+  slow:

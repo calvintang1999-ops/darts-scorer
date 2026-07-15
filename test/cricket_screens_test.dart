@@ -1,7 +1,18 @@
+import 'package:darts/games/cricket/cricket_config.dart';
+import 'package:darts/games/cricket/cricket_game.dart';
+import 'package:darts/games/cricket/cricket_play_screen.dart';
 import 'package:darts/main.dart';
+import 'package:darts/models/player.dart';
+import 'package:darts/models/throw.dart';
+import 'package:darts/services/announcer_service.dart';
+import 'package:darts/services/bot_profiles_provider.dart';
+import 'package:darts/services/dart_counter_service.dart';
+import 'package:darts/services/settings_provider.dart';
 import 'package:darts/services/storage_service.dart';
+import 'package:darts/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   Future<void> startGame(WidgetTester tester, {bool cutthroat = false}) async {
@@ -13,10 +24,24 @@ void main() {
     expect(find.text('Cricket setup'), findsOneWidget);
 
     if (cutthroat) {
+      // The bot picker section can push this below the ListView's
+      // mounted+cache area - scroll it into view first.
+      await tester.dragUntilVisible(
+        find.text('Cutthroat'),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
       await tester.tap(find.text('Cutthroat'));
       await tester.pumpAndSettle();
     }
 
+    // The bot picker section can push the Start button out of the
+    // ListView's build range on a short test surface - scroll it into view.
+    await tester.dragUntilVisible(
+      find.text('Start game'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
     await tester.tap(find.text('Start game'));
     await tester.pumpAndSettle();
   }
@@ -136,5 +161,53 @@ void main() {
     await tester.tap(find.text('Quit'));
     await tester.pumpAndSettle();
     expect(find.textContaining('to throw'), findsNothing);
+  });
+
+  testWidgets(
+      'a bot plays its whole turn automatically, then hands off to the human',
+      (tester) async {
+    final storage = InMemoryStorageService();
+    final profiles = await storage.loadBotProfiles();
+    final bot = Player.bot(
+        profiles.firstWhere((p) => p.name == 'World Class (105)'));
+    final human = Player.create('Human');
+
+    await tester.pumpWidget(MaterialApp(
+      home: MultiProvider(
+        providers: [
+          Provider<StorageService>.value(value: storage),
+          ChangeNotifierProvider(create: (_) => SettingsProvider()),
+          Provider<AnnouncerService>(
+            create: (ctx) => AnnouncerService(ctx.read<SettingsProvider>()),
+            dispose: (_, service) => service.dispose(),
+          ),
+          ChangeNotifierProvider(create: (_) => DartCounterService()),
+          ChangeNotifierProvider(
+              create: (_) => BotProfilesProvider.withProfiles(profiles)),
+        ],
+        child: CricketPlayScreen(
+          game: CricketGame(
+            players: [bot, human],
+            config: const CricketConfig(),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(DurationTokens.botThrowPacing);
+    }
+    await tester.pumpAndSettle();
+
+    final game =
+        tester.widget<CricketPlayScreen>(find.byType(CricketPlayScreen)).game;
+    expect(game.turnHistory, hasLength(1));
+    expect(game.turnHistory.single.throws, hasLength(3));
+    expect(
+        game.turnHistory.single.throws
+            .every((t) => t.source == ThrowSource.bot),
+        true);
+    expect(game.currentPlayerIndex, 1);
+    expect(tester.takeException(), isNull);
   });
 }

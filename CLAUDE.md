@@ -17,25 +17,37 @@ time. Please:
 
 1. **Games** (now): X01 fully working; Cricket, Split Score, Round the
    Clock next; later Shanghai, Halve-It, Bob's 27, Killer, training routines.
-2. **Bot opponent**: a configurable computer opponent to play against.
-   - Phase 3a (done): bot engine core - `BoardGeometry.aimPointFor` /
+2. **Bot opponent** (done): a configurable computer opponent to play
+   against. Bots are playable in all four game types (X01, Cricket, Half
+   It, Round the Clock).
+   - Phase 3a: bot engine core - `BoardGeometry.aimPointFor` /
      `segmentAt` (lib/models/dart_position.dart), `Segment`
      (lib/models/segment.dart), `BotArm`/`GaussianArm`/`ThrowContext`
      (lib/services/bot/), `X01Strategy`/`X01Brain` (lib/games/x01/), the
      `BotProfiles` table + 8 seeded presets (schema v4, calibrated via
      tool/calibrate_bot.dart), and `Player.botProfileId` /
      `MatchPlayers.botProfileId` so a bot can be a match participant.
-   - Phase 3b (next): brains for Cricket/Half It/Round the Clock, plus
-     wiring a bot into the actual match UI (bot profile picker, the play
-     screens driving BotBrain + BotArm turn by turn).
+   - Phase 3b: `CricketBrain`/`CricketStrategy`, `HalfItBrain`,
+     `RoundTheClockBrain` (one per game folder); `PlayerAndBotPicker`
+     (lib/widgets/) shared by every config screen so any player slot can
+     be a bot; `BotTurnDriver`/`BotTurnScreenController`
+     (lib/services/bot/) drive a bot's darts one at a time through the
+     same `applyThrow` path a human uses, paced by
+     `DurationTokens.botThrowPacing`, then hand off to whoever's next -
+     human or bot, in any player order.
+   - All 8 preset `BotProfile` rows have `isPreset = true`. Rows with
+     `isPreset = false` are reserved for a future **career mode** (not
+     built yet) where a player's own performance gets saved as a
+     custom bot profile to play against later - don't repurpose that
+     flag for anything else.
 3. **Voice announcer**: spoken scores ("One hundred and eighty!").
-4. **Camera auto-scoring**: a camera watches the board and enters throws
-   automatically.
+4. **Camera auto-scoring** (next): a camera watches the board and enters
+   throws automatically.
 5. **Personal statistics**: 3-dart average, checkout %, first-nine average,
    heatmaps by board position and by segment.
 
-Phases 2-5 are NOT built yet (except Phase 3a above), but the data model
-is already shaped for them - don't simplify it away.
+Phases 4-5 are NOT built yet, but the data model is already shaped for
+them - don't simplify it away.
 
 ## Architecture rules
 

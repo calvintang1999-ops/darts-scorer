@@ -38,6 +38,10 @@ abstract final class ElevationTokens {
 abstract final class DurationTokens {
   static const Duration fast = Duration(milliseconds: 150);
   static const Duration medium = Duration(milliseconds: 300);
+
+  /// Pause between a bot's darts during its turn - long enough for a human
+  /// watching to follow along, short enough not to feel like a wait.
+  static const Duration botThrowPacing = Duration(milliseconds: 750);
 }
 
 abstract final class SizeTokens {

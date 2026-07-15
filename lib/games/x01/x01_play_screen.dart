@@ -1,9 +1,17 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/match_record.dart';
 import '../../models/player.dart';
+import '../../models/throw.dart';
 import '../../services/announcer_service.dart';
+import '../../services/bot/bot_arm.dart';
+import '../../services/bot/bot_turn_screen_controller.dart';
+import '../../services/bot/gaussian_arm.dart';
+import '../../services/bot/throw_context.dart';
+import '../../services/bot_profiles_provider.dart';
 import '../../services/dart_counter_service.dart';
 import '../../services/stats/x01_stats.dart';
 import '../../services/storage_service.dart';
@@ -16,6 +24,7 @@ import '../../widgets/quit_game_scope.dart';
 import '../../widgets/rotate_board_dialog.dart';
 import '../../widgets/segment_input_pad.dart';
 import '../../widgets/stat_tile.dart';
+import 'x01_brain.dart';
 import 'x01_game.dart';
 
 /// The live X01 scoreboard + input pad. Pass-and-play: the device is
@@ -36,6 +45,13 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
   // safe, since by then the widget may already be detached from the tree.
   late final AnnouncerService _announcer;
   late final DartCounterService _dartCounter;
+  late final BotTurnScreenController _botTurns;
+
+  // One shared brain (all presets use the default strategy) and one arm
+  // per bot participant (accuracy - sigma - can differ preset to preset).
+  final _brain = const X01Brain();
+  final Map<String, BotArm> _arms = {};
+  int _dartsThrownInMatch = 0;
 
   @override
   void initState() {
@@ -44,15 +60,54 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
     _announcer = context.read<AnnouncerService>()..listenTo(widget.game);
     _dartCounter = context.read<DartCounterService>()
       ..listenTo(widget.game, onRotateReminderDue: _showRotateReminder);
+    _buildBotArms();
+    _botTurns = BotTurnScreenController(
+      game: widget.game,
+      isCurrentPlayerBot: () => widget.game.currentPlayer.botProfileId != null,
+      buildNextThrow: _buildNextBotThrow,
+    );
   }
 
   @override
   void dispose() {
+    _botTurns.dispose();
     widget.game.removeListener(_onGameChanged);
     _announcer.stopListening();
     _dartCounter.stopListening();
     _playersScrollController.dispose();
     super.dispose();
+  }
+
+  /// One [GaussianArm] per bot participant, built once from that bot's
+  /// profile (for its sigma) - looked up by botProfileId, not player id,
+  /// since BotProfilesProvider only knows about profiles, not this
+  /// match's participants.
+  void _buildBotArms() {
+    final profiles = context.read<BotProfilesProvider>().profiles;
+    for (final player in widget.game.players) {
+      final profileId = player.botProfileId;
+      if (profileId == null) continue;
+      final profile = profiles.where((p) => p.id == profileId).firstOrNull;
+      if (profile == null) continue;
+      _arms[player.id] = GaussianArm(sigmaMm: profile.sigmaMm, random: Random());
+    }
+  }
+
+  Throw _buildNextBotThrow() {
+    final game = widget.game;
+    final player = game.currentPlayer;
+    final decision = _brain.nextAim(
+      remainingScore: game.scores[game.currentPlayerIndex],
+      dartsLeftInTurn: game.dartsLeftInTurn,
+    );
+    final throwContext = ThrowContext.forAim(
+      decision.aimPoint,
+      isCheckoutAttempt: decision.isCheckoutAttempt,
+      dartIndexInTurn: game.currentTurnThrows.length,
+      dartIndexInMatch: _dartsThrownInMatch++,
+    );
+    return _arms[player.id]!.throwDart(decision.aimPoint, throwContext,
+        player: player, gameId: game.gameId);
   }
 
   void _showRotateReminder() {
@@ -61,6 +116,7 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
   }
 
   void _onGameChanged() {
+    _botTurns.onGameChanged();
     _scrollToCurrentPlayer();
     _saveIfFinished();
   }
@@ -146,6 +202,7 @@ class _X01PlayScreenState extends State<X01PlayScreen> {
                       player: game.currentPlayer,
                       gameId: game.gameId,
                       onThrow: game.applyThrow,
+                      enabled: game.currentPlayer.botProfileId == null,
                     ),
                   ],
                 );
